@@ -1,0 +1,28 @@
+{
+  "name": "viewer",
+  "type": "module",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "earcut": "^3.0.2",
+    "naive-ui": "^2.43.1",
+    "opendrive-parser": "workspace:*",
+    "three": "^0.180.0",
+    "vue": "^3.5.22"
+  },
+  "devDependencies": {
+    "@types/earcut": "^3.0.0",
+    "@types/node": "^24.6.0",
+    "@types/three": "^0.180.0",
+    "@vitejs/plugin-vue": "^6.0.1",
+    "@vue/tsconfig": "^0.8.1",
+    "typescript": "~5.9.3",
+    "vite": "^7.1.7",
+    "vue-tsc": "^3.1.0"
+  }
+}
