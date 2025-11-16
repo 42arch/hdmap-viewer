@@ -1,15 +1,15 @@
+import type { IElevationProfile, IPlanView } from '../types'
 import type { RawPlanView } from '../types/raw'
 import type ReferencePoint from './helpers/referencePoint'
-import type { ElevationProfile } from './profile'
 import arrayize from '../utils/arrayize'
 import { Arc, Line, Spiral } from './geometry'
 
-type Geometry = Line | Arc | Spiral
+type Geometry = Arc | Line | Spiral
 
-export default class PlanView {
+export default class PlanView implements IPlanView {
   public geometries: Geometry[] = []
 
-  private length: number = 0
+  public length: number = 0
 
   constructor(planView: RawPlanView) {
     for (const rawGeometry of arrayize(planView.geometry)) {
@@ -28,15 +28,15 @@ export default class PlanView {
     }
   }
 
-  sample(elevationProfile: ElevationProfile, step: number): ReferencePoint[] {
+  sample(elevationProfile: IElevationProfile, step: number): ReferencePoint[] {
     const line: ReferencePoint[] = []
     let sStartRoad = 0
     for (const geometry of this.geometries) {
-      const geometryLength =  geometry.length
+      const geometryLength = geometry.length
       const points = geometry.sample(elevationProfile, step)
       points.forEach((p) => {
         const roadS = p.s + sStartRoad
-        p.setSOfRoad(roadS) 
+        p.setSOfRoad(roadS)
       })
 
       line.push(...points)

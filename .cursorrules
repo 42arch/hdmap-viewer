@@ -1,0 +1,76 @@
+{
+  "$schema": "https://raw.githubusercontent.com/getcursor/cursorrules/main/schema.json",
+  "project": {
+    "name": "HDMAP Viewer Monorepo",
+    "description": "高精地图解析与可视化的 pnpm monorepo，包含 Vue3 可视化与解析库。"
+  },
+  "communication": {
+    "defaultLanguage": "zh-CN",
+    "style": {
+      "beConcise": true,
+      "headings": true,
+      "boldHighlights": true
+    },
+    "codeCitations": {
+      "preferCodeReferences": true
+    }
+  },
+  "conventions": {
+    "packageManager": "pnpm",
+    "nodeVersion": ">=18",
+    "monorepo": true,
+    "taskRunner": "turbo",
+    "scripts": {
+      "dev": "pnpm dev",
+      "build": "pnpm build",
+      "lint": "pnpm lint",
+      "clean": "pnpm clean"
+    }
+  },
+  "codeStyle": {
+    "naming": {
+      "descriptiveVariables": true,
+      "noAbbreviations": true,
+      "functionsAreVerbs": true
+    },
+    "typescript": {
+      "explicitExportedTypes": true,
+      "noAny": true
+    },
+    "controlFlow": {
+      "preferEarlyReturn": true,
+      "avoidDeepNesting": true,
+      "noUselessTryCatch": true
+    },
+    "comments": {
+      "noTrivialComments": true,
+      "onlyNonObviousRationales": true
+    },
+    "formatting": {
+      "respectExistingStyle": true,
+      "wrapLongLines": true
+    }
+  },
+  "paths": {
+    "apps": [
+      "apps/viewer"
+    ],
+    "packages": [
+      "packages/opendrive-parser",
+      "packages/apollo-map-parser"
+    ]
+  },
+  "assistant": {
+    "responses": {
+      "alwaysChinese": true,
+      "avoidOverFormatting": true,
+      "useBackticksForPaths": true
+    },
+    "edits": {
+      "doNotReformatUnrelatedCode": true,
+      "runLintsAfterEdits": true
+    }
+  }
+}
+
+

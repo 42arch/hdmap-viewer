@@ -1,8 +1,8 @@
-import type { RawElevation, RawElevationProfile, RawLateralProfile } from "../types/raw"
-import arrayize from "../utils/arrayize"
+import type { IElevation, IElevationProfile, ILateralProfile } from '../types'
+import type { RawElevation, RawElevationProfile, RawLateralProfile } from '../types/raw'
+import arrayize from '../utils/arrayize'
 
-
-export class Elevation {
+export class Elevation implements IElevation {
   public s: number = 0
   public a: number
   public b: number
@@ -18,11 +18,11 @@ export class Elevation {
   }
 }
 
-export class ElevationProfile {
-  public elevations: Elevation[] =[]
-  
+export class ElevationProfile implements IElevationProfile {
+  public elevations: Elevation[] = []
+
   constructor(rawElevationProfile: RawElevationProfile) {
-    for(const rawElevation of arrayize(rawElevationProfile.elevation)) {
+    for (const rawElevation of arrayize(rawElevationProfile.elevation)) {
       const elevation = new Elevation(rawElevation)
       this.elevations.push(elevation)
     }
@@ -39,12 +39,11 @@ export class ElevationProfile {
   }
 }
 
-
-export class LateralProfile {
+export class LateralProfile implements ILateralProfile {
   public superElevations: Elevation[] = []
 
   constructor(rawLateralProfile: RawLateralProfile) {
-    for(const rawElevation of arrayize(rawLateralProfile.superelevation)) {
+    for (const rawElevation of arrayize(rawLateralProfile.superelevation)) {
       const elevation = new Elevation(rawElevation)
       this.superElevations.push(elevation)
     }

@@ -5,11 +5,13 @@ import { XMLParser } from 'fast-xml-parser'
 import Header from '../elements/header'
 import Road from '../elements/road'
 import arrayize from '../utils/arrayize'
+import { Junction } from './junction'
 
 class OpenDrive {
   private step: number
   public header?: Header
   public roads: Road[] = []
+  public junctions: Junction[] = []
 
   private referenceLines: ReferencePoint[][] = []
 
@@ -23,6 +25,7 @@ class OpenDrive {
 
     this.header = new Header(rawData.header)
     this.parseRoads(rawData)
+    this.parseJunctions(rawData)
   }
 
   parseRoads(rawData: RawOpenDrive): void {
@@ -32,9 +35,16 @@ class OpenDrive {
     }
   }
 
+  parseJunctions(rawData: RawOpenDrive): void {
+    for (const rawJunction of arrayize(rawData.junction)) {
+      const junction = new Junction(rawJunction)
+      this.junctions.push(junction)
+    }
+  }
+
   process(): void {
     for (const road of this.roads) {
-      road.process(1)
+      road.process(this.step)
       this.referenceLines.push(road.getReferenceLine())
     }
   }

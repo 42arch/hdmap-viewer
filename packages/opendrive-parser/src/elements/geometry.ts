@@ -1,8 +1,8 @@
+import type { IArc, IBaseGeometry, IElevationProfile, ILine, ISpiral } from '../types'
 import type { RawGeometry } from '../types/raw'
-import type { ElevationProfile } from './profile'
 import ReferencePoint from './helpers/referencePoint'
 
-class BaseGeometry {
+class BaseGeometry implements IBaseGeometry {
   public hdg: number
   public length: number
   public s: number
@@ -18,12 +18,12 @@ class BaseGeometry {
   }
 }
 
-export class Line extends BaseGeometry {
+export class Line extends BaseGeometry implements ILine {
   constructor(geometry: RawGeometry) {
     super(geometry)
   }
 
-  sample(elevationsProfile: ElevationProfile, step: number): ReferencePoint[] {
+  sample(elevationsProfile: IElevationProfile, step: number): ReferencePoint[] {
     const referencePoints: ReferencePoint[] = []
     const nums = Math.ceil(this.length / step)
     for (let i = 0; i <= nums; i++) {
@@ -41,7 +41,7 @@ export class Line extends BaseGeometry {
   }
 }
 
-export class Arc extends BaseGeometry {
+export class Arc extends BaseGeometry implements IArc {
   public curvature: number
 
   constructor(geometry: RawGeometry) {
@@ -50,7 +50,7 @@ export class Arc extends BaseGeometry {
     this.curvature = Number(geometry.arc?.curvature)
   }
 
-  sample(elevationsProfile: ElevationProfile, step: number) {
+  sample(elevationsProfile: IElevationProfile, step: number) {
     const referencePoints: ReferencePoint[] = []
     const nums = Math.ceil(this.length / step)
     const curvature = this.curvature
@@ -75,7 +75,7 @@ export class Arc extends BaseGeometry {
   }
 }
 
-export class Spiral extends BaseGeometry {
+export class Spiral extends BaseGeometry implements ISpiral {
   public curvStart: number
   public curvEnd: number
 
@@ -86,7 +86,7 @@ export class Spiral extends BaseGeometry {
     this.curvEnd = Number(geomtry.spiral?.curvEnd)
   }
 
-  sample(elevationsProfile: ElevationProfile, step: number) {
+  sample(elevationsProfile: IElevationProfile, step: number) {
     const { curvStart, curvEnd, hdg } = this
     const referencePoints: ReferencePoint[] = []
 
@@ -121,5 +121,3 @@ export class Spiral extends BaseGeometry {
     return referencePoints
   }
 }
-
-export type Geometry = Line | Arc | Spiral

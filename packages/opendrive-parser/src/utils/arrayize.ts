@@ -1,5 +1,5 @@
 /**
- * 数组化
+ * arrayize
  * @param obj
  * @returns obj[]
  */

@@ -56,7 +56,6 @@ export interface RawRoadLink {
   contactPoint?: string
 }
 
-
 export interface RawType {
   speed: Speed
   s: string
@@ -215,6 +214,7 @@ export interface RawController {
   sequence: string
 }
 
+// raw junction
 export interface RawJunction {
   connection: RawConnection[] | RawConnection
   controller: any
@@ -233,7 +233,7 @@ export interface RawConnection {
   id: string
   incomingRoad: string
   connectingRoad: string
-  contactPoint: string
+  contactPoint: 'start' | 'end'
 }
 
 export interface UserData3 {

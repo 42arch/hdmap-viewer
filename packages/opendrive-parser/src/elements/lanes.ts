@@ -1,10 +1,10 @@
-import type { Boundary, Position, ReferenceLine } from '../types'
+import type { Boundary, ILane, ILaneOffset, ILanes, ILaneSection, ILaneWidth, IRoadMark, Position, ReferenceLine } from '../types'
 import type { RawLane, RawLaneOffset, RawLanes, RawLaneSection, RawLaneWidth, RawRoadMark } from '../types/raw'
 import arrayize from '../utils/arrayize'
 
 type Side = 'left' | 'right' | 'center'
 
-class LaneOffset {
+class LaneOffset implements ILaneOffset {
   public s: number
   public a: number
   public b: number
@@ -20,7 +20,7 @@ class LaneOffset {
   }
 }
 
-class LaneWidth {
+class LaneWidth implements ILaneWidth {
   public sOffset: number
   public a: number
   public b: number
@@ -36,7 +36,7 @@ class LaneWidth {
   }
 }
 
-class RoadMark {
+class RoadMark implements IRoadMark {
   public color?: string
   public laneChange?: string
   public material?: string
@@ -54,7 +54,7 @@ class RoadMark {
   }
 }
 
-export class Lane {
+export class Lane implements ILane {
   public id: string
   public type: string
   public level: string
@@ -64,6 +64,7 @@ export class Lane {
   private side: Side = 'left'
   private length: number = 0
   private boundary: Boundary
+  private boundaryLine: Position[] = [] // the outer side boundary line
   private centerLine: Position[] = []
 
   constructor(rawLane: RawLane, side: Side) {
@@ -74,7 +75,7 @@ export class Lane {
     this.side = side
     this.boundary = {
       inner: [],
-      outer: []
+      outer: [],
     }
 
     for (const rawLaneWidth of arrayize(rawLane.width)) {
@@ -88,15 +89,16 @@ export class Lane {
     }
   }
 
-
-  getWidthByS(sLocal: number): number {
+  private getWidthByS(sLocal: number): number {
     const widths = this.widths
-    if (!widths.length) return 0
+    if (!widths.length)
+      return 0
 
     let i = widths.findIndex(
-      (w, idx) => idx === widths.length - 1 || (sLocal >= w.sOffset && sLocal < widths[idx + 1].sOffset)
+      (w, idx) => idx === widths.length - 1 || (sLocal >= w.sOffset && sLocal < widths[idx + 1].sOffset),
     )
-    if (i === -1) i = widths.length - 1
+    if (i === -1)
+      i = widths.length - 1
 
     const w = widths[i]
     const ds = sLocal - w.sOffset
@@ -105,11 +107,10 @@ export class Lane {
   }
 
   generateBoundaries(referenceLine: ReferenceLine, mostSidePositions: Position[]) {
-
     const innerPositions = [...mostSidePositions]
-    const updatedPositions: Position[]= []
+    const updatedPositions: Position[] = []
 
-    for(let i = 0; i < referenceLine.length; i++) {
+    for (let i = 0; i < referenceLine.length; i++) {
       const referencePoint = referenceLine[i]
       const innerPosition = innerPositions[i]
 
@@ -117,8 +118,6 @@ export class Lane {
       const sOfLaneSection = referencePoint.getSOfLaneSection()
       const laneWidth = this.getWidthByS(sOfLaneSection)
       const normal = this.side === 'left' ? tangent + Math.PI / 2 : tangent - Math.PI / 2
-
-      // console.log(innerPositions, innerPositions.length, i, innerPosition)
 
       const [innerX, innerY, z] = innerPosition
       const outerX = innerX + Math.cos(normal) * laneWidth
@@ -130,22 +129,39 @@ export class Lane {
     const outerPositions = [...updatedPositions]
     this.boundary = {
       inner: innerPositions,
-      outer: outerPositions
+      outer: outerPositions,
     }
-    
+
     return {
       boundary: this.boundary,
-      mostSidePositions: [...outerPositions]
+      mostSidePositions: [...outerPositions],
     }
   }
 
-
+  /**
+   * Every lane has a boundary with one inner side and one outer side.
+   * This function returns the boundary.
+   * @returns the boundary
+   */
   getBoundary(): Boundary {
     return this.boundary
   }
+
+  setBoundaryLine(line: Position[]) {
+    this.boundaryLine = line
+  }
+
+  /**
+   * Every lane has a boundary with one inner side and one outer side.
+   * This function returns the outer side boundary line.
+   * @returns the outer side boundary line
+   */
+  getBoundaryLine(): Position[] {
+    return this.boundaryLine
+  }
 }
 
-export class LaneSection {
+export class LaneSection implements ILaneSection {
   public left: Lane[] = []
   public center?: Lane
   public right: Lane[] = []
@@ -177,26 +193,28 @@ export class LaneSection {
     return this.center ? [...this.left, this.center, ...this.right] : [...this.left, ...this.right]
   }
 
-
-  processLane(referenceLine: ReferenceLine) {
+  processLanes(referenceLine: ReferenceLine) {
     const leftLanes = this.left.sort((a, b) => Number(a.id) - Number(b.id))
     const rightLanes = this.right.sort((a, b) => Number(b.id) - Number(a.id))
 
     let mostLeftPositions = referenceLine.map(p => p.getPositionOfCenterLane())
     let mostRightPositions = referenceLine.map(p => p.getPositionOfCenterLane())
 
-    for(const lane of leftLanes) {
-      const {boundary, mostSidePositions } = lane.generateBoundaries(referenceLine, mostLeftPositions)
+    for (const lane of leftLanes) {
+      const { boundary, mostSidePositions } = lane.generateBoundaries(referenceLine, mostLeftPositions)
       this.boundaries.push(boundary)
+      lane.setBoundaryLine(mostSidePositions)
       mostLeftPositions = mostSidePositions
     }
 
-    for(const lane of rightLanes) {
+    for (const lane of rightLanes) {
       const { boundary, mostSidePositions } = lane.generateBoundaries(referenceLine, mostRightPositions)
       this.boundaries.push(boundary)
+      lane.setBoundaryLine(mostSidePositions)
       mostRightPositions = mostSidePositions
     }
 
+    this.center?.setBoundaryLine(referenceLine.map(p => p.getPositionOfCenterLane()))
   }
 
   getBoundaries(): Boundary[] {
@@ -208,7 +226,7 @@ export class LaneSection {
   }
 }
 
-export default class Lanes {
+export default class Lanes implements ILanes {
   public laneOffsets: LaneOffset[] = []
   public laneSections: LaneSection[] = []
 
@@ -241,12 +259,8 @@ export default class Lanes {
   public processLaneSections(referenceLine: ReferenceLine) {
     if (!this.laneSections.length)
       return
-    for (let laneSection of this.laneSections) {
-      // eslint-disable-next-line unused-imports/no-unused-vars
-      const startS = laneSection.s
-      // const endS = laneSection.endS
-      // const referenceLineInSection = []
-      laneSection.processLane(referenceLine)
+    for (const laneSection of this.laneSections) {
+      laneSection.processLanes(referenceLine)
     }
   }
 }

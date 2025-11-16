@@ -3,6 +3,8 @@ import { AxesHelper, BufferGeometry, Clock, DoubleSide, Float32BufferAttribute, 
 import { Line2, LineGeometry, LineMaterial, OrbitControls } from 'three/examples/jsm/Addons.js'
 import { boundaryToArea } from './utils'
 
+type LaneAreaMesh = Mesh<BufferGeometry, MeshBasicMaterial>
+
 class Viewer {
   private width: number
   private height: number
@@ -17,7 +19,8 @@ class Viewer {
   private mouse: Vector2
 
   private laneAreasGroup: Group
-  private hoveredLaneArea: Mesh<BufferGeometry, MeshBasicMaterial> | null = null
+  private hoveredLaneArea: LaneAreaMesh | null = null
+  private selectedLaneArea: LaneAreaMesh | null = null
 
   constructor(dom: HTMLDivElement) {
     this.dom = dom
@@ -86,10 +89,14 @@ class Viewer {
     this.controls.update()
     window.requestAnimationFrame(this.animate.bind(this))
 
+    if (this.selectedLaneArea) {
+      this.selectedLaneArea.material.color.set(0x45AAF2)
+    }
+
     this.raycaster.setFromCamera(this.mouse, this.camera)
     const intersects = this.raycaster.intersectObjects(this.laneAreasGroup.children, false)
     if (intersects.length) {
-      const intersected = intersects[0].object as Mesh<BufferGeometry, MeshBasicMaterial>
+      const intersected = intersects[0]!.object as Mesh<BufferGeometry, MeshBasicMaterial>
       if (intersected !== this.hoveredLaneArea) {
         if (this.hoveredLaneArea) {
           this.hoveredLaneArea.material.color.set(0xCCCCCC)
@@ -145,17 +152,25 @@ class Viewer {
           const { vertices, indices } = boundaryToArea(boundary)
           const positions = new Float32Array(vertices.length)
           for (let i = 0; i < vertices.length / 3; i++) {
-            positions[i * 3] = vertices[i * 3]
-            positions[i * 3 + 1] = vertices[i * 3 + 2]
-            positions[i * 3 + 2] = -vertices[i * 3 + 1]
+            positions[i * 3] = vertices[i * 3]!
+            positions[i * 3 + 1] = vertices[i * 3 + 2]!
+            positions[i * 3 + 2] = -vertices[i * 3 + 1]!
           }
 
           const geometry = new BufferGeometry()
           geometry.setAttribute('position', new Float32BufferAttribute(positions, 3))
           geometry.setIndex(indices)
-          const material = new MeshBasicMaterial({ color: 0xCCCCCC, side: DoubleSide, depthWrite: true, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 })
+          const material = new MeshBasicMaterial({
+            color: 0xCCCCCC,
+            side: DoubleSide,
+            depthWrite: false,
+            depthTest: false,
+            polygonOffset: true,
+            polygonOffsetFactor: 1,
+            polygonOffsetUnits: 1,
+          })
           const mesh = new Mesh(geometry, material)
-          mesh.userData = { id: lane.id }
+          mesh.name = `${road.id}-${section.s}-${lane.id}`
           this.laneAreasGroup.add(mesh)
         }
       }
@@ -171,46 +186,83 @@ class Viewer {
     for (const road of roads) {
       const laneSections = road.getLaneSections()
       for (const laneSection of laneSections) {
-        const boundaries = laneSection.getBoundaries()
+        // const boundaries = laneSection.getBoundaries()
+        // const boundaryLines = laneSection.getBoundaryLines()
+        const lanes = laneSection.getLanes()
 
-        for (const boundary of boundaries) {
-          const innerPositions = boundary.inner.map(p => new Vector3(p[0], p[2], -p[1]))
-          if (innerPositions.length < 2)
+        for (const lane of lanes) {
+          const boundaryLine = lane.getBoundaryLine()
+          const boundaryPositions = boundaryLine.map(p => new Vector3(p[0], p[2], -p[1]))
+          if (boundaryPositions.length < 2)
             continue
 
-          const geometry = new LineGeometry().setFromPoints(innerPositions)
+          const geometry = new LineGeometry().setFromPoints(boundaryPositions)
           const material = new LineMaterial({
             color: 0xFFFFFF,
             linewidth: 2,
             opacity: 0.8,
             transparent: true,
           })
-          const innerLine = new Line2(geometry, material)
-
-          group.add(innerLine)
-
-          const outerPositions = boundary.outer.map(p => new Vector3(p[0], p[2], -p[1]))
-          if (outerPositions.length < 2)
-            continue
-
-          const outerGeometry = new LineGeometry().setFromPoints(outerPositions)
-          const outerMaterial = new LineMaterial({
-            color: 0xFFFFFF,
-            linewidth: 2,
-            opacity: 0.8,
-            transparent: true,
-          })
-          const outerLine = new Line2(outerGeometry, outerMaterial)
-
-          group.add(outerLine)
+          const line = new Line2(geometry, material)
+          group.add(line)
         }
+
+        // for (const boundary of boundaries) {
+        //   const innerPositions = boundary.inner.map(p => new Vector3(p[0], p[2], -p[1]))
+        //   if (innerPositions.length < 2)
+        //     continue
+
+        //   const geometry = new LineGeometry().setFromPoints(innerPositions)
+        //   const material = new LineMaterial({
+        //     color: 0xFFFFFF,
+        //     linewidth: 2,
+        //     opacity: 0.8,
+        //     transparent: true,
+        //   })
+        //   const innerLine = new Line2(geometry, material)
+
+        //   group.add(innerLine)
+
+        //   const outerPositions = boundary.outer.map(p => new Vector3(p[0], p[2], -p[1]))
+        //   if (outerPositions.length < 2)
+        //     continue
+
+        //   const outerGeometry = new LineGeometry().setFromPoints(outerPositions)
+        //   const outerMaterial = new LineMaterial({
+        //     color: 0xFFFFFF,
+        //     linewidth: 2,
+        //     opacity: 0.8,
+        //     transparent: true,
+        //   })
+        //   const outerLine = new Line2(outerGeometry, outerMaterial)
+
+        //   group.add(outerLine)
+        // }
       }
     }
     group.position.y = group.position.y + 0.01
     this.scene.add(group)
   }
 
+  setSelectedLane(laneId: string | null) {
+    if (!laneId) {
+      this.selectedLaneArea?.material.color.set(0xCCCCCC)
+      this.selectedLaneArea = null
+      return
+    }
+
+    const mesh = this.laneAreasGroup.getObjectByName(laneId) as LaneAreaMesh
+    if (mesh) {
+      if (this.selectedLaneArea) {
+        this.selectedLaneArea.material.color.set(0xCCCCCC)
+      }
+      this.selectedLaneArea = mesh
+    }
+  }
+
   clear() {
+    this.laneAreasGroup.clear()
+    this.scene.remove(this.laneAreasGroup)
     this.scene.clear()
   }
 }
