@@ -1,5 +1,5 @@
 import type { ReferenceLine, Road } from 'opendrive-parser'
-import { AxesHelper, BufferGeometry, Clock, DoubleSide, Float32BufferAttribute, GridHelper, Group, Mesh, MeshBasicMaterial, PerspectiveCamera, Raycaster, Scene, Vector2, Vector3, WebGLRenderer } from 'three'
+import { AxesHelper, BufferGeometry, Clock, DoubleSide, Float32BufferAttribute, GridHelper, Group, Mesh, MeshBasicMaterial, NormalBlending, PerspectiveCamera, Raycaster, Scene, Vector2, Vector3, WebGLRenderer } from 'three'
 import { Line2, LineGeometry, LineMaterial, OrbitControls } from 'three/examples/jsm/Addons.js'
 import { boundaryToArea } from './utils'
 
@@ -64,6 +64,8 @@ class Viewer {
 
   bindEvents() {
     window.addEventListener('mousemove', (event) => {
+      if (event.target !== this.renderer.domElement)
+        return
       this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1
       this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1
     })
@@ -117,7 +119,8 @@ class Viewer {
     const axesHelper = new AxesHelper(100)
     axesHelper.translateY(0.01)
     const gridHelper = new GridHelper(1000, 10, 0x303030, 0x303030)
-    // this.scene.add(gridHelper)
+    gridHelper.translateY(-0.01)
+    this.scene.add(gridHelper)
     // this.scene.add(axesHelper)
   }
 
@@ -132,6 +135,8 @@ class Viewer {
 
       const geometry = new LineGeometry().setFromPoints(positions)
       const material = new LineMaterial({
+        depthTest: true,
+        depthWrite: false,
         color: 0xFFFF00,
         linewidth: 1,
       })
@@ -186,8 +191,6 @@ class Viewer {
     for (const road of roads) {
       const laneSections = road.getLaneSections()
       for (const laneSection of laneSections) {
-        // const boundaries = laneSection.getBoundaries()
-        // const boundaryLines = laneSection.getBoundaryLines()
         const lanes = laneSection.getLanes()
 
         for (const lane of lanes) {
@@ -198,46 +201,17 @@ class Viewer {
 
           const geometry = new LineGeometry().setFromPoints(boundaryPositions)
           const material = new LineMaterial({
+            depthTest: true,
+            depthWrite: false,
             color: 0xFFFFFF,
-            linewidth: 2,
-            opacity: 0.8,
+            linewidth: 1,
+            opacity: 1.0,
             transparent: true,
+            blending: NormalBlending,
           })
           const line = new Line2(geometry, material)
           group.add(line)
         }
-
-        // for (const boundary of boundaries) {
-        //   const innerPositions = boundary.inner.map(p => new Vector3(p[0], p[2], -p[1]))
-        //   if (innerPositions.length < 2)
-        //     continue
-
-        //   const geometry = new LineGeometry().setFromPoints(innerPositions)
-        //   const material = new LineMaterial({
-        //     color: 0xFFFFFF,
-        //     linewidth: 2,
-        //     opacity: 0.8,
-        //     transparent: true,
-        //   })
-        //   const innerLine = new Line2(geometry, material)
-
-        //   group.add(innerLine)
-
-        //   const outerPositions = boundary.outer.map(p => new Vector3(p[0], p[2], -p[1]))
-        //   if (outerPositions.length < 2)
-        //     continue
-
-        //   const outerGeometry = new LineGeometry().setFromPoints(outerPositions)
-        //   const outerMaterial = new LineMaterial({
-        //     color: 0xFFFFFF,
-        //     linewidth: 2,
-        //     opacity: 0.8,
-        //     transparent: true,
-        //   })
-        //   const outerLine = new Line2(outerGeometry, outerMaterial)
-
-        //   group.add(outerLine)
-        // }
       }
     }
     group.position.y = group.position.y + 0.01
