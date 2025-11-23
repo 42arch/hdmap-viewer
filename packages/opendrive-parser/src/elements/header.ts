@@ -1,17 +1,18 @@
-import type { RawHeader } from "../types/raw"
+import type { IHeader } from '../types'
+import type { RawHeader } from '../types/raw'
 
-export default class Header {
-  public revMajor?: string
-  public revMinor?: string
-  public name?: string
-  public version?: string
-  public date?: string
-  public north?: number
-  public south?: number
-  public east?: number
-  public west?: number
-  public vendor?: string
-  public geoReference?: string
+export default class Header implements IHeader {
+  public revMajor: string
+  public revMinor: string
+  public name: string
+  public version: string
+  public date: string
+  public north: number
+  public south: number
+  public east: number
+  public west: number
+  public vendor: string
+  public geoReference: string
 
   constructor(rawHeader: RawHeader) {
     this.revMajor = rawHeader.revMajor

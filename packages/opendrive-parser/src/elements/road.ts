@@ -62,14 +62,28 @@ class Road implements IRoad {
       this.objects = new Objects(rawRoad.objects)
   }
 
-  getReferenceLine(): ReferenceLine {
+  public getReferenceLine(): ReferenceLine {
     return this.referenceLine
   }
 
-  getLaneSections(): LaneSection[] {
+  public getLaneSections(): LaneSection[] {
     if (!this.lanes || !this.lanes.laneSections)
       return []
     return this.lanes.laneSections
+  }
+
+  public getLaneSectionByS(s: number): LaneSection | undefined {
+    const sortedLaneSections = [...this.getLaneSections()].sort((a, b) => a.s - b.s)
+    let targetSection = sortedLaneSections[0]
+    for (const laneSection of sortedLaneSections) {
+      if (s >= laneSection.s) {
+        targetSection = laneSection
+      }
+      else {
+        break
+      }
+    }
+    return targetSection
   }
 
   private addOffsetToReferenceLine() {

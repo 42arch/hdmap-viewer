@@ -1,26 +1,24 @@
 {
   "name": "hdmap-parser-and-viewer",
   "private": true,
+  "packageManager": "pnpm@10.7.1",
   "description": "The monorepo for hdmap parser and viewer",
+  "author": "",
+  "license": "ISC",
+  "keywords": [],
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "clean": "turbo run clean && rm -rf node_modules"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "packageManager": "pnpm@10.7.1",
   "devDependencies": {
     "@antfu/eslint-config": "^6.1.0",
     "eslint": "^9.38.0",
     "turbo": "^2.5.8",
     "typescript": "^5.9.3"
-  },
-  "engines": {
-    "node": ">=18"
   }
-
-  
 }

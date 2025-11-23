@@ -2,9 +2,9 @@ import type { IElevationProfile, IPlanView } from '../types'
 import type { RawPlanView } from '../types/raw'
 import type ReferencePoint from './helpers/referencePoint'
 import arrayize from '../utils/arrayize'
-import { Arc, Line, Spiral } from './geometry'
+import { Arc, Line, ParamPoly3, Spiral } from './geometry'
 
-type Geometry = Arc | Line | Spiral
+type Geometry = Arc | Line | Spiral | ParamPoly3
 
 export default class PlanView implements IPlanView {
   public geometries: Geometry[] = []
@@ -23,13 +23,16 @@ export default class PlanView implements IPlanView {
       else if (rawGeometry.spiral) {
         geometry = new Spiral(rawGeometry)
       }
+      else if (rawGeometry.paramPoly3) {
+        geometry = new ParamPoly3(rawGeometry)
+      }
 
       geometry && this.geometries.push(geometry)
     }
   }
 
   sample(elevationProfile: IElevationProfile, step: number): ReferencePoint[] {
-    const line: ReferencePoint[] = []
+    const referencePoints: ReferencePoint[] = []
     let sStartRoad = 0
     for (const geometry of this.geometries) {
       const geometryLength = geometry.length
@@ -39,10 +42,10 @@ export default class PlanView implements IPlanView {
         p.setSOfRoad(roadS)
       })
 
-      line.push(...points)
+      referencePoints.push(...points)
       sStartRoad += geometryLength
     }
 
-    return line
+    return referencePoints
   }
 }

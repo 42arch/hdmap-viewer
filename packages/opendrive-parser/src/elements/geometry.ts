@@ -1,4 +1,4 @@
-import type { IArc, IBaseGeometry, IElevationProfile, ILine, ISpiral } from '../types'
+import type { IArc, IBaseGeometry, IElevationProfile, ILine, IParamPoly3, ISpiral } from '../types'
 import type { RawGeometry } from '../types/raw'
 import ReferencePoint from './helpers/referencePoint'
 
@@ -40,7 +40,6 @@ export class Line extends BaseGeometry implements ILine {
     return referencePoints
   }
 }
-
 export class Arc extends BaseGeometry implements IArc {
   public curvature: number
 
@@ -118,6 +117,97 @@ export class Spiral extends BaseGeometry implements ISpiral {
       point.setTangent(nHdg)
       referencePoints.push(point)
     }
+    return referencePoints
+  }
+}
+
+export class ParamPoly3 extends BaseGeometry implements IParamPoly3 {
+  public aU: number
+  public bU: number
+  public cU: number
+  public dU: number
+
+  public aV: number
+  public bV: number
+  public cV: number
+  public dV: number
+  public pRange: 'normalized' | 'arcLength'
+
+  constructor(geometry: RawGeometry) {
+    super(geometry)
+
+    this.aU = Number(geometry.paramPoly3?.aU || 0)
+    this.bU = Number(geometry.paramPoly3?.bU || 0)
+    this.cU = Number(geometry.paramPoly3?.cU || 0)
+    this.dU = Number(geometry.paramPoly3?.dU || 0)
+    this.aV = Number(geometry.paramPoly3?.aV || 0)
+    this.bV = Number(geometry.paramPoly3?.bV || 0)
+    this.cV = Number(geometry.paramPoly3?.cV || 0)
+    this.dV = Number(geometry.paramPoly3?.dV || 0)
+
+    this.pRange = (geometry.paramPoly3?.pRange as 'normalized' | 'arcLength') || 'normalized'
+  }
+
+  private evalPoly(a: number, b: number, c: number, d: number, p: number) {
+    return a + b * p + c * p * p + d * p * p * p
+  }
+
+  private evalPolyDeriv(a: number, b: number, c: number, d: number, p: number) {
+    return b + 2 * c * p + 3 * d * p * p
+  }
+
+  sample(elevationsProfile: IElevationProfile, step: number) {
+    const {
+      aU,
+      bU,
+      cU,
+      dU,
+      aV,
+      bV,
+      cV,
+      dV,
+      hdg,
+      length,
+    } = this
+    const referencePoints: ReferencePoint[] = []
+
+    const nums = Math.ceil(length / step)
+    const len = Math.max(length, 1e-9)
+
+    for (let i = 0; i <= nums; i++) {
+      const s = Math.min(i * step, length)
+
+      let p: number
+      if (this.pRange === 'normalized') {
+        p = s / len
+      }
+      else { // 'arcLength'
+        p = s
+      }
+
+      const u = this.evalPoly(aU, bU, cU, dU, p)
+      const v = this.evalPoly(aV, bV, cV, dV, p)
+
+      const du_dp = this.evalPolyDeriv(aU, bU, cU, dU, p)
+      const dv_dp = this.evalPolyDeriv(aV, bV, cV, dV, p)
+      const dp_ds = this.pRange === 'normalized' ? (1 / len) : 1
+      const du_ds = du_dp * dp_ds
+      const dv_ds = dv_dp * dp_ds
+
+      const cosH = Math.cos(hdg)
+      const sinH = Math.sin(hdg)
+      const nx = this.x + u * cosH - v * sinH
+      const ny = this.y + u * sinH + v * cosH
+
+      const heading = hdg + Math.atan2(dv_ds, du_ds)
+
+      const z = elevationsProfile.getElevationByS(s + this.s)
+
+      const point = new ReferencePoint(nx, ny, z, s, heading)
+      point.setTangent(heading)
+      referencePoints.push(point)
+    }
+
     return referencePoints
   }
 }

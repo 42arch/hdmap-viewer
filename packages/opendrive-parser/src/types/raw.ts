@@ -78,6 +78,17 @@ export interface RawGeometry {
     curvStart: string
     curvEnd: string
   }
+  paramPoly3?: {
+    aU: string
+    aV: string
+    bU: string
+    bV: string
+    cU: string
+    cV: string
+    dU: string
+    dV: string
+    pRange: string
+  }
   s: string
   x: string
   y: string

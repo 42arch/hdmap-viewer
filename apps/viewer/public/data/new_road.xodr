@@ -1,0 +1,115 @@
+<OpenDRIVE>
+    <header date="2025-11-19 14:32:10.016880" east="0.0" name="AS2023119.xodr" north="0.0" revMajor="1" revMinor="5" south="0.0" west="0.0"/>
+    <road id="1" junction="-1" length="568.7662747421298" rule="RHT">
+        <link/>
+        <type country="CN" s="0" type="rural"/>
+        <planView>
+            <geometry hdg="4.397954742019505" length="568.7662747421298" s="0" x="5.2870985631809" y="-1.92021191101672">
+                <paramPoly3 aU="0" aV="0" bU="-568.9275195759386" bV="0" cU="1.0030168174210914" cV="35.8923467641515" dU="-0.46661356171093676" dV="-16.593228415996933" pRange="normalized"/>
+            </geometry>
+        </planView>
+        <elevationProfile/>
+        <lateralProfile/>
+        <lanes>
+            <laneSection s="0">
+                <left>
+                    <lane id="9" level="false" type="none">
+                        <link/>
+                        <width a="17.5" b="0" c="0" d="0" sOffset="0"/>
+                    </lane>
+                    <lane id="8" level="false" type="shoulder">
+                        <link/>
+                        <width a="1" b="0" c="0" d="0" sOffset="0"/>
+                        <height inner="0.12" outer="0.12" sOffset="0"/>
+                        <height inner="0.12" outer="0.12" sOffset="0"/>
+                    </lane>
+                    <lane id="7" level="false" type="border">
+                        <link/>
+                        <width a="0.5" b="0" c="0" d="0" sOffset="0"/>
+                        <roadMark color="standard" height="0.02" sOffset="0" type="edge" weight="standard" width="0.15"/>
+                    </lane>
+                    <lane id="6" level="false" type="biking">
+                        <link/>
+                        <width a="2" b="0" c="0" d="0" sOffset="0"/>
+                    </lane>
+                    <lane id="5" level="false" type="driving">
+                        <link/>
+                        <width a="3.75" b="0" c="0" d="0" sOffset="0"/>
+                        <roadMark color="standard" height="0.02" sOffset="0" type="solid" weight="standard" width="0.2"/>
+                    </lane>
+                    <lane id="4" level="false" type="driving">
+                        <link/>
+                        <width a="3.75" b="0" c="0" d="0" sOffset="0"/>
+                        <roadMark color="standard" height="0.02" sOffset="0" type="broken" weight="standard" width="0.15"/>
+                    </lane>
+                    <lane id="3" level="false" type="driving">
+                        <link/>
+                        <width a="3.75" b="0" c="0" d="0" sOffset="0"/>
+                        <roadMark color="standard" height="0.02" sOffset="0" type="broken" weight="standard" width="0.15"/>
+                    </lane>
+                    <lane id="2" level="false" type="border">
+                        <link/>
+                        <width a="0.5" b="0" c="0" d="0" sOffset="0"/>
+                        <roadMark color="standard" height="0.02" sOffset="0" type="solid" weight="standard" width="0.2"/>
+                    </lane>
+                    <lane id="1" level="false" type="shoulder">
+                        <link/>
+                        <width a="-0.5" b="0" c="0" d="0" sOffset="0"/>
+                        <height inner="0.12" outer="0.12" sOffset="0"/>
+                    </lane>
+                </left>
+                <center>
+                    <lane id="0" level="false" type="none">
+                        <roadMark color="standard" height="0.02" sOffset="0" type="none" weight="standard" width="0.0"/>
+                    </lane>
+                </center>
+                <right>
+                    <lane id="-1" level="false" type="shoulder">
+                        <link/>
+                        <width a="-0.5" b="0" c="0" d="0" sOffset="0"/>
+                        <height inner="0.12" outer="0.12" sOffset="0"/>
+                    </lane>
+                    <lane id="-2" level="false" type="border">
+                        <link/>
+                        <width a="0.5" b="0" c="0" d="0" sOffset="0"/>
+                        <roadMark color="standard" height="0.02" sOffset="0" type="solid" weight="standard" width="0.2"/>
+                    </lane>
+                    <lane id="-3" level="false" type="driving">
+                        <link/>
+                        <width a="3.75" b="0" c="0" d="0" sOffset="0"/>
+                        <roadMark color="standard" height="0.02" sOffset="0" type="broken" weight="standard" width="0.15"/>
+                    </lane>
+                    <lane id="-4" level="false" type="driving">
+                        <link/>
+                        <width a="3.75" b="0" c="0" d="0" sOffset="0"/>
+                        <roadMark color="standard" height="0.02" sOffset="0" type="broken" weight="standard" width="0.15"/>
+                    </lane>
+                    <lane id="-5" level="false" type="driving">
+                        <link/>
+                        <width a="3.75" b="0" c="0" d="0" sOffset="0"/>
+                        <roadMark color="standard" height="0.02" sOffset="0" type="solid" weight="standard" width="0.2"/>
+                    </lane>
+                    <lane id="-6" level="false" type="biking">
+                        <link/>
+                        <width a="2" b="0" c="0" d="0" sOffset="0"/>
+                    </lane>
+                    <lane id="-7" level="false" type="border">
+                        <link/>
+                        <width a="0.5" b="0" c="0" d="0" sOffset="0"/>
+                        <roadMark color="standard" height="0.02" sOffset="0" type="edge" weight="standard" width="0.15"/>
+                    </lane>
+                    <lane id="-8" level="false" type="shoulder">
+                        <link/>
+                        <width a="1" b="0" c="0" d="0" sOffset="0"/>
+                        <height inner="0.12" outer="0.12" sOffset="0"/>
+                        <height inner="0.12" outer="0.12" sOffset="0"/>
+                    </lane>
+                    <lane id="-9" level="false" type="none">
+                        <link/>
+                        <width a="17.5" b="0" c="0" d="0" sOffset="0"/>
+                    </lane>
+                </right>
+            </laneSection>
+        </lanes>
+    <objects><object type="vegetation" name="VegBushGroupMw1m.flt" id="100" s="20" t="-16.75" zOffset="-1.4" validLength="0" orientation="none" length="14.7357958" width="2.045043" height="2" hdg="3.1415926535897931" pitch="0" roll="0"><repeat s="20" length="548.7662747421298" distance="15" tStart="-16.75" tEnd="-16.75" widthStart="4.095" widthEnd="4.095" heightStart="4.003" heightEnd="4.003" zOffsetStart="-1.4" zOffsetEnd="-1.4"/></object><object type="vegetation" name="VegBushGroupMw1m.flt" id="101" s="20" t="16.75" zOffset="-1.4" validLength="0" orientation="none" length="14.7357958" width="2.045043" height="2" hdg="0" pitch="0" roll="0"><repeat s="20" length="548.7662747421298" distance="15" tStart="16.75" tEnd="16.75" widthStart="4.095" widthEnd="4.095" heightStart="4.003" heightEnd="4.003" zOffsetStart="-1.4" zOffsetEnd="-1.4"/></object><object type="tree" name="VegTree03b.flt" id="102" s="20" t="-16.35" zOffset="-0.4" validLength="0" orientation="none" length="3.29" width="3.2645" height="5.8925" hdg="0" pitch="0" roll="0"><repeat s="20" length="548.7662747421298" distance="50" tStart="-16.35" tEnd="-16.35" widthStart="6.529" widthEnd="6.529" heightStart="11.785" heightEnd="11.785" zOffsetStart="-0.4" zOffsetEnd="-0.4"/></object><object type="tree" name="VegTreeParkway01b.flt" id="103" s="35" t="-16.65" zOffset="-0.4" validLength="0" orientation="none" length="3.692" width="3.808" height="5.416" hdg="0" pitch="0" roll="0"><repeat s="35" length="548.7662747421298" distance="50" tStart="-16.65" tEnd="-16.65" widthStart="9.52" widthEnd="9.52" heightStart="13.54" heightEnd="13.54" zOffsetStart="-0.4" zOffsetEnd="-0.4"/></object><object type="tree" name="VegTree03b.flt" id="104" s="20" t="16.35" zOffset="-0.4" validLength="0" orientation="none" length="3.29" width="3.2645" height="5.8925" hdg="3.1415926535897931" pitch="0" roll="0"><repeat s="20" length="548.7662747421298" distance="50" tStart="16.35" tEnd="16.35" widthStart="6.529" widthEnd="6.529" heightStart="11.785" heightEnd="11.785" zOffsetStart="-0.4" zOffsetEnd="-0.4"/></object><object type="tree" name="VegTreeParkway01b.flt" id="105" s="35" t="16.65" zOffset="-0.4" validLength="0" orientation="none" length="3.692" width="3.808" height="5.416" hdg="3.1415926535897931" pitch="0" roll="0"><repeat s="35" length="548.7662747421298" distance="50" tStart="16.65" tEnd="16.65" widthStart="9.52" widthEnd="9.52" heightStart="13.54" heightEnd="13.54" zOffsetStart="-0.4" zOffsetEnd="-0.4"/></object><object type="building" name="BldRes21.flt" id="106" s="40" t="-25.75" zOffset="-0.035" validLength="0" orientation="none" length="10.39" width="10.47" height="10.8" hdg="1.5707963267948966" pitch="0" roll="0"><repeat s="40" length="528.7662747421298" distance="200" tStart="-25.75" tEnd="-25.75" widthStart="10.47" widthEnd="10.47" heightStart="10.8" heightEnd="10.8" zOffsetStart="-0.035" zOffsetEnd="-0.035"/></object><object type="building" name="BldRes21.flt" id="107" s="40" t="25.75" zOffset="-0.035" validLength="0" orientation="none" length="10.39" width="10.47" height="10.8" hdg="4.7123889803846897e+00" pitch="0" roll="0"><repeat s="40" length="528.7662747421298" distance="200" tStart="25.75" tEnd="25.75" widthStart="10.47" widthEnd="10.47" heightStart="10.8" heightEnd="10.8" zOffsetStart="-0.035" zOffsetEnd="-0.035"/></object><object type="building" name="BldRes24.flt" id="108" s="120" t="-25.75" zOffset="-0.035" validLength="0" orientation="none" length="10.63" width="12.64" height="13" hdg="1.5707963267948966" pitch="0" roll="0"><repeat s="120" length="528.7662747421298" distance="200" tStart="-25.75" tEnd="-25.75" widthStart="12.64" widthEnd="12.64" heightStart="13" heightEnd="13" zOffsetStart="-0.035" zOffsetEnd="-0.035"/></object><object type="building" name="BldRes24.flt" id="109" s="120" t="25.75" zOffset="-0.035" validLength="0" orientation="none" length="10.63" width="12.64" height="13" hdg="4.7123889803846897e+00" pitch="0" roll="0"><repeat s="120" length="528.7662747421298" distance="200" tStart="25.75" tEnd="25.75" widthStart="12.64" widthEnd="12.64" heightStart="13" heightEnd="13" zOffsetStart="-0.035" zOffsetEnd="-0.035"/></object></objects></road>
+</OpenDRIVE>

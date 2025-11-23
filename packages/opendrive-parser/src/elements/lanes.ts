@@ -3,6 +3,7 @@ import type { RawLane, RawLaneOffset, RawLanes, RawLaneSection, RawLaneWidth, Ra
 import arrayize from '../utils/arrayize'
 
 type Side = 'left' | 'right' | 'center'
+type Direction = 1 | -1
 
 class LaneOffset implements ILaneOffset {
   public s: number
@@ -61,6 +62,7 @@ export class Lane implements ILane {
   public widths: LaneWidth[] = []
   public roadMark: RoadMark[] = []
 
+  private direction: Direction = 1
   private side: Side = 'left'
   private length: number = 0
   private boundary: Boundary
@@ -73,6 +75,7 @@ export class Lane implements ILane {
     this.level = rawLane.level
 
     this.side = side
+    this.direction = side === 'left' ? 1 : -1
     this.boundary = {
       inner: [],
       outer: [],

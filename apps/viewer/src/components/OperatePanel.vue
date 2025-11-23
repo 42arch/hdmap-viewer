@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { TreeOption, UploadFileInfo } from 'naive-ui'
+import type { Road } from 'opendrive-parser'
 import { CaretRight } from '@vicons/fa'
 import { NButton, NCheckbox, NCollapse, NCollapseItem, NGrid, NGridItem, NIcon, NScrollbar, NSelect, NTree, NUpload, useThemeVars } from 'naive-ui'
 import OpenDrive from 'opendrive-parser'
@@ -31,14 +32,11 @@ watch(precision, () => {
 
   viewer.value.addReferenceLines(referenceLines)
   store.setRoads(roads)
-  viewer.value.addLanes(roads)
-  viewer.value.addLaneAreas(roads)
+  viewer.value.addRoads(roads)
 })
 
 function parseOpenDrive(content: string, precision: number) {
   const openDrive = new OpenDrive(content, precision)
-  console.log('openDrive', openDrive)
-
   openDrive.process()
 
   const referenceLines = openDrive.getReferenceLines()
@@ -59,8 +57,9 @@ function handleChange({ file }: { file: UploadFileInfo }) {
       viewer.value.clear()
       viewer.value.addReferenceLines(referenceLines)
       store.setRoads(roads)
-      viewer.value.addLanes(roads)
-      viewer.value.addLaneAreas(roads)
+      viewer.value.addRoads(roads)
+      // viewer.value.addLanes(roads)
+      // viewer.value.addLaneAreas(roads)
     }
   }
 
@@ -70,17 +69,24 @@ function handleChange({ file }: { file: UploadFileInfo }) {
 function nodeProps({ option }: { option: TreeOption }) {
   return {
     onClick() {
-      viewer.value?.setSelectedLane(option.key as string)
+      // viewer.value?.setSelectedLane(option.key as string)
     },
     onMouseover() {
-      // console.log('onMouseOver option', option)
-      // if (option.isLeaf) {
-      //   // store.setSelectedLane(option.value as Lane)
-      //   viewer.value?.setSelectedLane(option.key as string)
-      // }
+      console.log('onMouseover options', option)
+      if (option.level === 'road') {
+        viewer.value?.setHighlightRoad(option.key as string)
+      }
+      else if (option.level === 'section') {
+        viewer.value?.setHighlightSection(option.key as string)
+      }
+      else if (option.level === 'lane') {
+        viewer.value?.setHighlightLane(option.key as string)
+      }
     },
     onMouseout() {
-      // viewer.value?.setSelectedLane(null)
+      viewer.value?.setHighlightLane(null)
+      viewer.value?.setHighlightRoad(null)
+      viewer.value?.setHighlightSection(null)
     },
   }
 }
@@ -88,7 +94,7 @@ function nodeProps({ option }: { option: TreeOption }) {
 const roadNetworkData = computed(() => {
   return roads.value.map((road) => {
     return {
-      label: road.name,
+      label: road.name || road.id,
       key: `${road.id}`,
       value: road,
       level: 'road',

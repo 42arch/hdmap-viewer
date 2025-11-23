@@ -1,14 +1,36 @@
 import type ReferencePoint from '../elements/helpers/referencePoint'
+import type { Junction } from '../elements/junction'
 import type { LaneSection, Lane as LaneType } from '../elements/lanes'
 import type Road from '../elements/road'
-// import type RoadType from '../elements/road'
 
 export type Position = [number, number, number]
 
 export type ReferenceLine = ReferencePoint[]
 
-// export type Road = RoadType
 export type Lane = LaneType
+
+export interface IOpenDrive {
+  header: IHeader
+  roads: Road[]
+  junctions: Junction[]
+
+  getRoads: () => Road[]
+  getRoadById: (id: string) => Road | undefined
+  getReferenceLines: () => ReferenceLine[]
+}
+
+export interface IHeader {
+  revMajor: string
+  revMinor: string
+  name: string
+  version: string
+  date: string
+  north: number
+  south: number
+  east: number
+  west: number
+  vendor: string
+}
 
 export interface Boundary {
   inner: Position[]
@@ -61,6 +83,18 @@ export interface ISpiral extends IBaseGeometry {
   curvEnd: number
 }
 
+export interface IParamPoly3 extends IBaseGeometry {
+  aU: number
+  aV: number
+  bU: number
+  bV: number
+  cU: number
+  cV: number
+  dU: number
+  dV: number
+  pRange: 'normalized' | 'arcLength'
+}
+
 export interface IPlanView {
   length: number
 }
@@ -100,6 +134,9 @@ export interface ILane {
   level: string
   widths: ILaneWidth[]
   roadMark: IRoadMark[]
+
+  getBoundary: () => Boundary
+  getBoundaryLine: () => Position[]
 }
 
 export interface ILaneOffset {
