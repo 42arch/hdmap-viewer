@@ -1,16 +1,17 @@
 import type { Lane, ReferenceLine, Road } from 'opendrive-parser'
-import { AxesHelper, BufferGeometry, Clock, DoubleSide, Float32BufferAttribute, GridHelper, Group, InstancedMesh, Mesh, MeshBasicMaterial, NormalBlending, PerspectiveCamera, Raycaster, Scene, Vector2, Vector3, WebGLRenderer } from 'three'
-import { BufferGeometryUtils, Line2, LineGeometry, LineMaterial, OrbitControls } from 'three/examples/jsm/Addons.js'
+import { AxesHelper, BufferGeometry, Clock, DoubleSide, Float32BufferAttribute, GridHelper, Group, Mesh, MeshBasicMaterial, NormalBlending, PerspectiveCamera, Raycaster, Scene, Vector2, Vector3, WebGLRenderer } from 'three'
+import { Line2, LineGeometry, LineMaterial, OrbitControls } from 'three/examples/jsm/Addons.js'
+import HighlightManager from './highlight-manager'
 import { boundaryToArea } from './utils'
 
-type LaneAreaMesh = Mesh<BufferGeometry, MeshBasicMaterial>
+export type LaneAreaMesh = Mesh<BufferGeometry, MeshBasicMaterial>
 
 class Viewer {
   private width: number
   private height: number
   private pixelRatio: number
   private dom: HTMLDivElement
-  private scene: Scene
+  public scene: Scene
   private camera: PerspectiveCamera
   private renderer: WebGLRenderer
   private controls: OrbitControls
@@ -20,12 +21,11 @@ class Viewer {
 
   private isMouseOverCanvas: boolean = false
 
-  private roads: Road[] = []
-  private laneGroup: Group
+  public roads: Road[] = []
+  public laneGroup: Group
   private laneBoundaryGroup: Group
-  private hightlightRoad: LaneAreaMesh | null = null
-  private hightlightLane: LaneAreaMesh | null = null
-  private hightlightSection: LaneAreaMesh | null = null
+
+  public hm: HighlightManager
 
   constructor(dom: HTMLDivElement) {
     this.dom = dom
@@ -62,6 +62,7 @@ class Viewer {
     this.laneGroup.name = 'lanes'
     this.laneBoundaryGroup = new Group()
     this.laneBoundaryGroup.name = 'laneBoundaries'
+    this.hm = new HighlightManager(this)
 
     this.addHelper()
     this.resize()
@@ -75,6 +76,7 @@ class Viewer {
     })
     this.dom.addEventListener('mouseleave', () => {
       this.isMouseOverCanvas = false
+      this.hm.clear('canvas')
     })
     this.dom.addEventListener('mousemove', (event) => {
       if (event.target !== this.renderer.domElement)
@@ -104,26 +106,18 @@ class Viewer {
     this.controls.update()
     window.requestAnimationFrame(this.animate.bind(this))
 
-    if (!this.isMouseOverCanvas)
+    if (!this.isMouseOverCanvas) {
       return
+    }
 
     this.raycaster.setFromCamera(this.mouse, this.camera)
     const intersects = this.raycaster.intersectObjects(this.laneGroup.children, false)
     if (intersects.length) {
-      const intersected = intersects[0]!.object as Mesh<BufferGeometry, MeshBasicMaterial>
-
-      if (intersected.name !== this.hightlightLane?.name) {
-        this.clearHighlightRoad()
-        this.clearHighlightLane()
-        const roadId = intersected.name.split('-')[0]!
-        const sectionS = Number(intersected.name.split('-')[1])
-        this.setHighlightRoad(roadId)
-        this.setHighlightLane(intersected.name)
-      }
+      const intersected = intersects[0]!.object as LaneAreaMesh
+      this.hm.setHighlight('lane', intersected.name, 'canvas')
     }
     else {
-      this.clearHighlightLane()
-      this.clearHighlightRoad()
+      this.hm.clear('canvas')
     }
   }
 
@@ -256,102 +250,6 @@ class Viewer {
     }
     group.position.y = group.position.y + 0.01
     this.scene.add(group)
-  }
-
-  clearHighlightRoad() {
-    if (this.hightlightRoad) {
-      this.scene.remove(this.hightlightRoad)
-      this.hightlightRoad.geometry.dispose()
-      this.hightlightRoad.material.dispose()
-      this.hightlightRoad = null
-    }
-  }
-
-  setHighlightRoad(roadId: string | null) {
-    if (!roadId) {
-      this.clearHighlightRoad()
-      return
-    }
-
-    const road = this.roads.find(r => r.id === roadId)
-    if (!road) {
-      return
-    }
-
-    const laneGeometries = []
-    const laneSections = road.getLaneSections()
-    const laneNames = laneSections.flatMap(section => section.getLanes().map(lane => `${roadId}-${section.s}-${lane.id}`))
-
-    for (const laneName of laneNames) {
-      const mesh = this.laneGroup.getObjectByName(laneName) as LaneAreaMesh
-      const clonedMesh = mesh.clone()
-      clonedMesh.position.y += 0.001
-      laneGeometries.push(clonedMesh.geometry)
-    }
-
-    const merged = BufferGeometryUtils.mergeGeometries(laneGeometries)
-    const material = new MeshBasicMaterial({
-      color: 0x3867D6,
-      side: DoubleSide,
-      depthWrite: false,
-      depthTest: false,
-      polygonOffset: true,
-      polygonOffsetFactor: 1,
-      polygonOffsetUnits: 1,
-    })
-    this.hightlightRoad = new Mesh(merged, material)
-    this.hightlightRoad.name = roadId
-    this.scene.add(this.hightlightRoad)
-  }
-
-  clearHighlightSection() {
-    if (this.hightlightSection) {
-      this.scene.remove(this.hightlightSection)
-      this.hightlightSection.geometry.dispose()
-      this.hightlightSection.material.dispose()
-      this.hightlightSection = null
-    }
-  }
-
-  setHighlightSection(laneSectionS: string | null) {
-    if (!laneSectionS) {
-      this.clearHighlightSection()
-      return
-    }
-
-    const mesh = this.laneGroup.getObjectByName(laneSectionS) as LaneAreaMesh
-
-    this.hightlightSection = mesh.clone()
-    this.hightlightSection.material = this.hightlightSection.material.clone()
-    this.hightlightSection.material.color.set(0x45AAF2)
-
-    this.hightlightSection.position.y += 0.001
-    this.scene.add(this.hightlightSection)
-  }
-
-  setHighlightLane(laneId: string | null) {
-    if (!laneId) {
-      this.clearHighlightLane()
-      return
-    }
-
-    const mesh = this.laneGroup.getObjectByName(laneId) as LaneAreaMesh
-
-    this.hightlightLane = mesh.clone()
-    this.hightlightLane.material = this.hightlightLane.material.clone()
-    this.hightlightLane.material.color.set(0x45AAF2)
-
-    this.hightlightLane.position.y += 0.001
-    this.scene.add(this.hightlightLane)
-  }
-
-  clearHighlightLane() {
-    if (this.hightlightLane) {
-      this.scene.remove(this.hightlightLane)
-      this.hightlightLane.geometry.dispose()
-      this.hightlightLane.material.dispose()
-      this.hightlightLane = null
-    }
   }
 
   clear() {

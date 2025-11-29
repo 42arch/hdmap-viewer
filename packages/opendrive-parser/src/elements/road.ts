@@ -12,10 +12,10 @@ class RoadLink implements IRoadLink {
   public elementType: string
   public contactPoint?: string
 
-  constructor(link: RawRoadLink) {
-    this.elementId = link.elementId
-    this.elementType = link.elementType
-    this.contactPoint = link.contactPoint
+  constructor(rawRoadLink: RawRoadLink) {
+    this.elementId = rawRoadLink.elementId
+    this.elementType = rawRoadLink.elementType
+    this.contactPoint = rawRoadLink.contactPoint
   }
 }
 
@@ -23,12 +23,12 @@ class Link implements ILink {
   public predecessor?: RoadLink
   public successor?: RoadLink
 
-  constructor(link: RawLink) {
-    if (link.predecessor) {
-      this.predecessor = new RoadLink(link.predecessor)
+  constructor(rawLink: RawLink) {
+    if (rawLink.predecessor) {
+      this.predecessor = new RoadLink(rawLink.predecessor)
     }
-    if (link.successor) {
-      this.successor = new RoadLink(link.successor)
+    if (rawLink.successor) {
+      this.successor = new RoadLink(rawLink.successor)
     }
   }
 }
@@ -90,15 +90,15 @@ class Road implements IRoad {
     for (const point of this.referenceLine) {
       const roadS = point.getSOfRoad()
       const offset = this.lanes.calculateOffsetByS(roadS)
-      const [px, py, pz] = this.addPostionOfCenterLaneToReferencePoint(point.x, point.y, point.z, point.hdg, offset)
-      const sOfLaneSection = this.addSOfLaneSectionToReferenceLine(roadS)
+      const [px, py, pz] = this.calculatePositionOfCenterLane(point.x, point.y, point.z, point.hdg, offset)
+      const sOfLaneSection = this.calculateSOfLaneSection(roadS)
       point.setPositionOfCenterLane([px, py, pz])
       point.setSOfLaneSection(sOfLaneSection)
       point.shiftOffset(offset)
     }
   }
 
-  private addSOfLaneSectionToReferenceLine(sOfRoad: number) {
+  private calculateSOfLaneSection(sOfRoad: number) {
     const sortedLaneSections = [...this.getLaneSections()].sort((a, b) => a.s - b.s)
 
     let targetSection = sortedLaneSections[0]
@@ -114,7 +114,7 @@ class Road implements IRoad {
     return targetSection ? sOfRoad - targetSection.s : sOfRoad
   }
 
-  private addPostionOfCenterLaneToReferencePoint(x: number, y: number, z: number, tangent: number, offset: number) {
+  private calculatePositionOfCenterLane(x: number, y: number, z: number, tangent: number, offset: number) {
     const normal = tangent + Math.PI / 2
     let px = x
     let py = y

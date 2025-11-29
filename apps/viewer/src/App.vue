@@ -10,6 +10,8 @@ const themeOverrides: GlobalThemeOverrides = {
     bodyColor: '#1E1E1E',
     fontSize: '12px',
     borderRadius: '0px',
+    boxShadow1: 'none',
+    boxShadow2: 'none',
   },
   Collapse: {
     titlePadding: '4px 0px',

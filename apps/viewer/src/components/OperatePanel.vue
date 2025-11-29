@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { TreeOption, UploadFileInfo } from 'naive-ui'
-import type { Road } from 'opendrive-parser'
 import { CaretRight } from '@vicons/fa'
 import { NButton, NCheckbox, NCollapse, NCollapseItem, NGrid, NGridItem, NIcon, NScrollbar, NSelect, NTree, NUpload, useThemeVars } from 'naive-ui'
 import OpenDrive from 'opendrive-parser'
@@ -72,21 +71,10 @@ function nodeProps({ option }: { option: TreeOption }) {
       // viewer.value?.setSelectedLane(option.key as string)
     },
     onMouseover() {
-      console.log('onMouseover options', option)
-      if (option.level === 'road') {
-        viewer.value?.setHighlightRoad(option.key as string)
-      }
-      else if (option.level === 'section') {
-        viewer.value?.setHighlightSection(option.key as string)
-      }
-      else if (option.level === 'lane') {
-        viewer.value?.setHighlightLane(option.key as string)
-      }
+      viewer.value?.hm.setHighlight(option.level as 'road' | 'section' | 'lane', option.key as string, 'panel')
     },
     onMouseout() {
-      viewer.value?.setHighlightLane(null)
-      viewer.value?.setHighlightRoad(null)
-      viewer.value?.setHighlightSection(null)
+      viewer.value?.hm.clear('panel')
     },
   }
 }
