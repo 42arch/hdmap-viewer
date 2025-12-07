@@ -1,24 +1,23 @@
+import type { Level, Source } from './types'
 import type { LaneAreaMesh } from './viewer'
 import type Viewer from './viewer'
-import { DoubleSide, Group, Mesh, MeshBasicMaterial } from 'three'
+import { DoubleSide, Mesh, MeshBasicMaterial } from 'three'
 import { BufferGeometryUtils } from 'three/examples/jsm/Addons.js'
-
-type Source = 'panel' | 'canvas'
 
 class HighlightManager {
   private viewer: Viewer
   public highlightRoad: LaneAreaMesh | null = null
   public highlightLane: LaneAreaMesh | null = null
   public highlightSection: LaneAreaMesh | null = null
+  public highlightPredecessors: LaneAreaMesh | null = null
+  public highlightSuccessors: LaneAreaMesh | null = null
 
   private currentSource: Source | null = null
-  // private highlightGroup: Group
+  private currentKey: string | null = null
+  public highlightCallback: ((level: Level, key: string, source: Source) => void) | null = null
 
   constructor(viewer: Viewer) {
     this.viewer = viewer
-    // this.highlightGroup = new Group()
-    // this.highlightGroup.name = 'highlight'
-    // this.highlightGroup.renderOrder = 3
   }
 
   clearHighlightLane() {
@@ -42,9 +41,9 @@ class HighlightManager {
       return
     }
 
-    const [roadKey, sectionKey] = laneId.split('-')
+    const [roadKey, sectionKey] = laneId.split('_')
     this.setHighlightRoad(roadKey!)
-    this.setHighlightSection(`${roadKey}-${sectionKey}`)
+    this.setHighlightSection(`${roadKey}_${sectionKey}`)
 
     this.highlightLane = mesh.clone()
     this.highlightLane.material = this.highlightLane.material.clone()
@@ -68,14 +67,14 @@ class HighlightManager {
       return
     }
 
-    const road = this.viewer.roads.find(r => r.id === roadId)
+    const road = this.viewer.openDrive?.getRoadById(roadId)
     if (!road) {
       return
     }
 
     const laneGeometries = []
     const laneSections = road.getLaneSections()
-    const laneNames = laneSections.flatMap(section => section.getLanes().map(lane => `${roadId}-${section.s}-${lane.id}`))
+    const laneNames = laneSections.flatMap(section => section.getLanes().map(lane => `${roadId}_${section.s}_${lane.id}`))
 
     for (const laneName of laneNames) {
       const mesh = this.viewer.laneGroup.getObjectByName(laneName) as LaneAreaMesh
@@ -109,7 +108,7 @@ class HighlightManager {
   }
 
   setHighlightSection(key: string) {
-    const [roadId, sectionS] = key.split('-')
+    const [roadId, sectionS] = key.split('_')
     if (!roadId) {
       this.clearHighlightSection()
       return
@@ -117,18 +116,17 @@ class HighlightManager {
     if (!sectionS) {
       return
     }
-    const road = this.viewer.roads.find(r => r.id === roadId)
+    const road = this.viewer.openDrive?.getRoadById(roadId)
     if (!road) {
       return
     }
-    const laneSections = road.getLaneSections()
-    const laneSection = laneSections.find(section => section.s === Number(sectionS))
+    const laneSection = road.getLaneSectionByS(Number(sectionS))
     if (!laneSection) {
       return
     }
     const laneGeometries = []
     const lanes = laneSection.getLanes()
-    const laneNames = lanes.map(lane => `${roadId}-${sectionS}-${lane.id}`)
+    const laneNames = lanes.map(lane => `${roadId}_${sectionS}_${lane.id}`)
 
     for (const laneName of laneNames) {
       const mesh = this.viewer.laneGroup.getObjectByName(laneName) as LaneAreaMesh
@@ -148,14 +146,92 @@ class HighlightManager {
     })
     this.highlightSection = new Mesh(merged, material)
     this.highlightSection.position.y += 0.001
-    this.highlightSection.name = `${roadId}-${sectionS}`
+    this.highlightSection.name = `${roadId}_${sectionS}`
     this.viewer.scene.add(this.highlightSection)
   }
 
-  setHighlight(level: 'road' | 'section' | 'lane', key: string, source: Source) {
+  setHighlightPredecessors(laneIds: string[]) {
+    if (laneIds.length === 0)
+      return
+    const geometries = []
+    for (const laneId of laneIds) {
+      const mesh = this.viewer.laneGroup.getObjectByName(laneId) as LaneAreaMesh
+      const clonedMesh = mesh.clone()
+      clonedMesh.position.y += 0.001
+      geometries.push(clonedMesh.geometry)
+    }
+
+    const merged = BufferGeometryUtils.mergeGeometries(geometries)
+    const material = new MeshBasicMaterial({
+      color: 0xEDCC0D, // #edcc0d
+      side: DoubleSide,
+      depthWrite: false,
+      depthTest: false,
+      polygonOffset: true,
+      polygonOffsetFactor: 1,
+      polygonOffsetUnits: 1,
+    })
+    this.highlightPredecessors = new Mesh(merged, material)
+    this.highlightPredecessors.position.y += 0.001
+    this.highlightPredecessors.name = `${laneIds.join('_')}`
+    this.viewer.scene.add(this.highlightPredecessors)
+  }
+
+  clearHighlightPredecessors() {
+    if (this.highlightPredecessors) {
+      this.viewer.scene.remove(this.highlightPredecessors)
+      this.highlightPredecessors.geometry.dispose()
+      this.highlightPredecessors.material.dispose()
+      this.highlightPredecessors = null
+    }
+  }
+
+  setHighlightSuccessors(laneIds: string[]) {
+    if (laneIds.length === 0)
+      return
+    const geometries = []
+    for (const laneId of laneIds) {
+      const mesh = this.viewer.laneGroup.getObjectByName(laneId) as LaneAreaMesh
+      const clonedMesh = mesh.clone()
+      clonedMesh.position.y += 0.001
+      geometries.push(clonedMesh.geometry)
+    }
+
+    const merged = BufferGeometryUtils.mergeGeometries(geometries)
+    const material = new MeshBasicMaterial({
+      color: 0x09DA2F, // #09da2f
+      side: DoubleSide,
+      depthWrite: false,
+      depthTest: false,
+      polygonOffset: true,
+      polygonOffsetFactor: 1,
+      polygonOffsetUnits: 1,
+    })
+    this.highlightSuccessors = new Mesh(merged, material)
+    this.highlightSuccessors.position.y += 0.001
+    this.highlightSuccessors.name = `${laneIds.join('_')}`
+    this.viewer.scene.add(this.highlightSuccessors)
+  }
+
+  clearHighlightSuccessors() {
+    if (this.highlightSuccessors) {
+      this.viewer.scene.remove(this.highlightSuccessors)
+      this.highlightSuccessors.geometry.dispose()
+      this.highlightSuccessors.material.dispose()
+      this.highlightSuccessors = null
+    }
+  }
+
+  setHighlight(level: Level, key: string, source: Source) {
+    if (this.currentKey === key && this.currentSource === source) {
+      return
+    }
+
     this.clearHighlightLane()
     this.clearHighlightSection()
     this.clearHighlightRoad()
+    this.clearHighlightPredecessors()
+    this.clearHighlightSuccessors()
 
     switch (level) {
       case 'road':
@@ -169,11 +245,47 @@ class HighlightManager {
         break
     }
 
-    this.currentSource = source
+    const predecessors = this.viewer.openDrive?.graph.getPredecessors(key)
+    const successors = this.viewer.openDrive?.graph.getSuccessors(key)
+    console.log('+++++++lane+++++++', key)
+    console.log('predecessors', predecessors)
+    console.log('successors', successors)
+    this.setHighlightPredecessors(predecessors ?? [])
+    this.setHighlightSuccessors(successors ?? [])
 
-    // ensure group is at the end of render list
-    // this.viewer.scene.remove(this.highlightGroup)
-    // this.viewer.scene.add(this.highlightGroup)
+    // const [roadKey, sectionKey, laneKey] = key?.split('_') || []
+    // if (roadKey) {
+    //   const road = this.viewer.openDrive?.getRoadById(roadKey)
+    //   if (!road)
+    //     return
+    //   const link = road.getLink()
+    //   if (!link)
+    //     return
+
+    //   if (sectionKey && road) {
+    //     const section = road.getLaneSectionByS(Number(sectionKey))
+
+    //     if (laneKey && section) {
+    //       const lane = section.getLaneById(laneKey)
+    //       const predecessors = lane?.getPredecessors()
+    //       const successors = lane?.getSuccessors()
+    //       console.log('+++++++lane+++++++', lane?.getUserId())
+    //       console.log('predecessor', predecessors?.map(lane => lane.getUserId()))
+    //       console.log('successor', successors?.map(lane => lane.getUserId()))
+    //       this.setHighlightPredecessors(predecessors?.map(lane => lane.getUserId()) || [])
+    //       this.setHighlightSuccessors(successors?.map(lane => lane.getUserId()) || [])
+    //     }
+    //   }
+    // }
+
+    this.highlightCallback?.(level, key, source)
+
+    this.currentSource = source
+    this.currentKey = key
+  }
+
+  onHighlight(callback: (level: Level, key: string | null, source: Source) => void) {
+    this.highlightCallback = callback
   }
 
   clear(source: Source) {
@@ -182,6 +294,8 @@ class HighlightManager {
       this.clearHighlightRoad()
       this.clearHighlightSection()
       this.clearHighlightLane()
+      this.clearHighlightPredecessors()
+      this.clearHighlightSuccessors()
       this.currentSource = null
     }
   }

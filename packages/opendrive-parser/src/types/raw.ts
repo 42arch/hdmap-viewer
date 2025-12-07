@@ -51,9 +51,9 @@ export interface RawLink {
 }
 
 export interface RawRoadLink {
-  elementType: string
+  elementType: 'road' | 'junction'
   elementId: string
-  contactPoint?: string
+  contactPoint?: 'start' | 'end'
 }
 
 export interface RawType {
@@ -178,6 +178,10 @@ export interface RawLane {
   id: string
   type: string
   level: string
+  link?: {
+    predecessor: { id: string }
+    successor: { id: string }
+  }
 }
 
 export interface RawObject {

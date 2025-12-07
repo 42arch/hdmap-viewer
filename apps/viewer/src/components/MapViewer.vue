@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import Viewer from '../libs/viewer'
-import { useAppStore } from '../store'
+import Viewer from '@/libs/viewer'
+import { useAppStore } from '@/store'
 
 const store = useAppStore()
 const viewerDom = ref<HTMLDivElement | null>(null)

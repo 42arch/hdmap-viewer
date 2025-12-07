@@ -1,16 +1,18 @@
-import type { ILink, IRoad, IRoadLink, ReferenceLine } from '../types'
+import type { ContactPoint, ElementType, ILink, IRoad, IRoadLink, ReferenceLine } from '../types'
 import type { RawLink, RawRoad, RawRoadLink } from '../types/raw'
 import type ReferencePoint from './helpers/referencePoint'
+import type { Junction } from './junction'
 import type { LaneSection } from './lanes'
+import type OpenDrive from './opendrive'
 import Lanes from './lanes'
 import Objects from './objects'
 import PlanView from './plan-view'
 import { ElevationProfile, LateralProfile } from './profile'
 
-class RoadLink implements IRoadLink {
+export class RoadLink implements IRoadLink {
   public elementId: string
-  public elementType: string
-  public contactPoint?: string
+  public elementType: ElementType
+  public contactPoint?: ContactPoint
 
   constructor(rawRoadLink: RawRoadLink) {
     this.elementId = rawRoadLink.elementId
@@ -19,7 +21,7 @@ class RoadLink implements IRoadLink {
   }
 }
 
-class Link implements ILink {
+export class Link implements ILink {
   public predecessor?: RoadLink
   public successor?: RoadLink
 
@@ -34,6 +36,8 @@ class Link implements ILink {
 }
 
 class Road implements IRoad {
+  private openDrive: OpenDrive
+  public type: string = 'road'
   public id: string
   public name: string
   public length: number
@@ -47,14 +51,15 @@ class Road implements IRoad {
 
   private referenceLine: ReferencePoint[] = []
 
-  constructor(rawRoad: RawRoad) {
+  constructor(rawRoad: RawRoad, openDrive: OpenDrive) {
+    this.openDrive = openDrive
     this.id = rawRoad.id
     this.name = rawRoad.name
     this.junction = rawRoad.junction
     this.length = Number(rawRoad.length)
     this.link = new Link(rawRoad.link)
     this.planView = new PlanView(rawRoad.planView)
-    this.lanes = new Lanes(rawRoad.lanes)
+    this.lanes = new Lanes(rawRoad.lanes, this)
     this.elevationProfile = new ElevationProfile(rawRoad.elevationProfile)
     if (rawRoad.lateralProfile)
       this.lateralProfile = new LateralProfile(rawRoad.lateralProfile)
@@ -72,6 +77,14 @@ class Road implements IRoad {
     return this.lanes.laneSections
   }
 
+  public getFirstLaneSection(): LaneSection | undefined {
+    return this.lanes.laneSections[0]
+  }
+
+  public getLastLaneSection(): LaneSection | undefined {
+    return this.lanes.laneSections[this.lanes.laneSections.length - 1]
+  }
+
   public getLaneSectionByS(s: number): LaneSection | undefined {
     const sortedLaneSections = [...this.getLaneSections()].sort((a, b) => a.s - b.s)
     let targetSection = sortedLaneSections[0]
@@ -84,6 +97,48 @@ class Road implements IRoad {
       }
     }
     return targetSection
+  }
+
+  public getLink() {
+    return this.link
+  }
+
+  public getPredecessor(): { type: 'road', element: Road } | { type: 'junction', element: Junction } | undefined {
+    const predecessor = this.link?.predecessor
+    if (!predecessor) {
+      return
+    }
+    if (predecessor.elementType === 'road') {
+      return {
+        type: 'road',
+        element: this.openDrive.getRoadById(predecessor.elementId) as Road,
+      }
+    }
+    else if (predecessor.elementType === 'junction') {
+      return {
+        type: 'junction',
+        element: this.openDrive.getJunctionById(predecessor.elementId) as Junction,
+      }
+    }
+  }
+
+  public getSuccessor(): { type: 'road', element: Road } | { type: 'junction', element: Junction } | undefined {
+    const successor = this.link?.successor
+    if (!successor) {
+      return
+    }
+    if (successor.elementType === 'road') {
+      return {
+        type: 'road',
+        element: this.openDrive.getRoadById(successor.elementId) as Road,
+      }
+    }
+    else if (successor.elementType === 'junction') {
+      return {
+        type: 'junction',
+        element: this.openDrive.getJunctionById(successor.elementId) as Junction,
+      }
+    }
   }
 
   private addOffsetToReferenceLine() {

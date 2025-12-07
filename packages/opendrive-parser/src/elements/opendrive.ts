@@ -6,12 +6,14 @@ import Header from '../elements/header'
 import Road from '../elements/road'
 import arrayize from '../utils/arrayize'
 import { Junction } from './junction'
+import RoutingGraph from './routing-graph'
 
 class OpenDrive implements IOpenDrive {
   private step: number
   public header: Header
   public roads: Road[] = []
   public junctions: Junction[] = []
+  public graph: RoutingGraph
 
   private referenceLines: ReferencePoint[][] = []
 
@@ -22,7 +24,7 @@ class OpenDrive implements IOpenDrive {
     })
     const rawData = xmlParser.parse(xml).OpenDRIVE as RawOpenDrive
     this.step = step
-
+    this.graph = new RoutingGraph(this)
     this.header = new Header(rawData.header)
     this.parseRoads(rawData)
     this.parseJunctions(rawData)
@@ -30,14 +32,14 @@ class OpenDrive implements IOpenDrive {
 
   private parseRoads(rawData: RawOpenDrive): void {
     for (const rawRoad of arrayize(rawData.road)) {
-      const road = new Road(rawRoad)
+      const road = new Road(rawRoad, this)
       this.roads.push(road)
     }
   }
 
   private parseJunctions(rawData: RawOpenDrive): void {
     for (const rawJunction of arrayize(rawData.junction)) {
-      const junction = new Junction(rawJunction)
+      const junction = new Junction(rawJunction, this)
       this.junctions.push(junction)
     }
   }
@@ -47,18 +49,28 @@ class OpenDrive implements IOpenDrive {
       road.process(this.step)
       this.referenceLines.push(road.getReferenceLine())
     }
+    console.log('process')
+    this.graph.build()
   }
 
   getReferenceLines(): ReferenceLine[] {
     return this.referenceLines
   }
 
-  getRoads(): Road[] {
+  public getRoads(): Road[] {
     return this.roads
   }
 
-  getRoadById(id: string): Road | undefined {
+  public getRoadById(id: string): Road | undefined {
     return this.roads.find(road => road.id === id)
+  }
+
+  public getJunctions(): Junction[] {
+    return this.junctions
+  }
+
+  public getJunctionById(id: string): Junction | undefined {
+    return this.junctions.find(junction => junction.id === id)
   }
 }
 

@@ -2,17 +2,23 @@ import type ReferencePoint from '../elements/helpers/referencePoint'
 import type { Junction } from '../elements/junction'
 import type { LaneSection, Lane as LaneType } from '../elements/lanes'
 import type Road from '../elements/road'
+import type RoutingGraph from '../elements/routing-graph'
 
+export type LaneUserId = string
 export type Position = [number, number, number]
 
 export type ReferenceLine = ReferencePoint[]
 
 export type Lane = LaneType
 
+export type ElementType = 'road' | 'junction'
+export type ContactPoint = 'start' | 'end'
+
 export interface IOpenDrive {
   header: IHeader
   roads: Road[]
   junctions: Junction[]
+  graph: RoutingGraph
 
   getRoads: () => Road[]
   getRoadById: (id: string) => Road | undefined

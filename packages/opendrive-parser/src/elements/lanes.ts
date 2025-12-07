@@ -1,5 +1,6 @@
-import type { Boundary, ILane, ILaneOffset, ILanes, ILaneSection, ILaneWidth, IRoadMark, Position, ReferenceLine } from '../types'
+import type { Boundary, ILane, ILaneLink, ILaneOffset, ILanes, ILaneSection, ILaneWidth, IRoadMark, Position, ReferenceLine } from '../types'
 import type { RawLane, RawLaneOffset, RawLanes, RawLaneSection, RawLaneWidth, RawRoadMark } from '../types/raw'
+import type Road from './road'
 import arrayize from '../utils/arrayize'
 
 type Side = 'left' | 'right' | 'center'
@@ -55,13 +56,26 @@ class RoadMark implements IRoadMark {
   }
 }
 
+class Link {
+  public predecessor: { id: string }
+  public successor: { id: string }
+
+  constructor(rawLink: { predecessor: { id: string }, successor: { id: string } }) {
+    this.predecessor = rawLink.predecessor
+    this.successor = rawLink.successor
+  }
+}
+
 export class Lane implements ILane {
   public id: string
   public type: string
   public level: string
   public widths: LaneWidth[] = []
   public roadMark: RoadMark[] = []
+  public link?: Link
 
+  private road: Road
+  private laneSection: LaneSection
   private direction: Direction = 1
   private side: Side = 'left'
   private length: number = 0
@@ -69,7 +83,9 @@ export class Lane implements ILane {
   private boundaryLine: Position[] = [] // the outer side boundary line
   private centerLine: Position[] = []
 
-  constructor(rawLane: RawLane, side: Side) {
+  constructor(rawLane: RawLane, side: Side, road: Road, laneSection: LaneSection) {
+    this.road = road
+    this.laneSection = laneSection
     this.id = rawLane.id
     this.type = rawLane.type
     this.level = rawLane.level
@@ -90,6 +106,8 @@ export class Lane implements ILane {
       const roadMark = new RoadMark(rawRoadMark)
       this.roadMark.push(roadMark)
     }
+
+    this.link = rawLane.link ? new Link(rawLane.link) : undefined
   }
 
   private getWidthByS(sLocal: number): number {
@@ -162,9 +180,65 @@ export class Lane implements ILane {
   getBoundaryLine(): Position[] {
     return this.boundaryLine
   }
+
+  /**
+   * Returns the unique id of the lane.
+   * @returns the unique id of the lane
+   */
+  getUserId(): string {
+    return `${this.road.id}_${this.laneSection.s}_${this.id}`
+  }
+
+  getPredecessors(): Lane[] {
+    const preElement = this.road.getPredecessor()
+    if (!preElement)
+      return []
+    if (preElement.type === 'junction') {
+      const junction = preElement.element
+      const predecessors = junction.getPrecessorLanes(this.road.id, this.id)
+      return predecessors
+    }
+    else if (preElement.type === 'road') {
+      if (!this.link)
+        return []
+      const preRoad = preElement.element
+      const cp = this.road.getLink()?.predecessor?.contactPoint
+      const section = cp === 'start' ? preRoad.getFirstLaneSection() : preRoad.getLastLaneSection()
+      const predecessor = section?.getLaneById(this.link?.predecessor.id)
+      return predecessor ? [predecessor] : []
+    }
+    else {
+      return []
+    }
+  }
+
+  getSuccessors() {
+    const sucElement = this.road.getSuccessor()
+    if (!sucElement)
+      return []
+    if (sucElement.type === 'junction') {
+      const junction = sucElement.element
+      const successors = junction.getSuccessorLanes(this.road.id, this.id)
+      return successors
+    }
+    else if (sucElement.type === 'road') {
+      if (!this.link)
+        return []
+      const sucRoad = sucElement.element
+      const cp = this.road.getLink()?.successor?.contactPoint
+      const section = cp === 'end' ? sucRoad.getLastLaneSection() : sucRoad.getFirstLaneSection()
+      const successor = section?.getLaneById(this.link?.successor.id)
+      return successor ? [successor] : []
+    }
+
+    else {
+      return []
+    }
+  }
 }
 
 export class LaneSection implements ILaneSection {
+  private road: Road
   public left: Lane[] = []
   public center?: Lane
   public right: Lane[] = []
@@ -173,30 +247,49 @@ export class LaneSection implements ILaneSection {
   private boundaries: Boundary[] = []
   private centerLines: ReferenceLine[] = []
 
-  constructor(rawLaneSection: RawLaneSection) {
+  constructor(rawLaneSection: RawLaneSection, road: Road) {
+    this.road = road
     for (const rawLane of arrayize(rawLaneSection.left?.lane)) {
-      const lane = new Lane(rawLane, 'left')
+      const lane = new Lane(rawLane, 'left', this.road, this)
       this.left.push(lane)
     }
 
     const centerRawLane = rawLaneSection.center?.lane
     if (centerRawLane) {
-      this.center = new Lane(centerRawLane, 'center')
+      this.center = new Lane(centerRawLane, 'center', this.road, this)
     }
 
     for (const rawLane of arrayize(rawLaneSection.right?.lane)) {
-      const lane = new Lane(rawLane, 'right')
+      const lane = new Lane(rawLane, 'right', this.road, this)
       this.right.push(lane)
     }
 
     this.s = Number(rawLaneSection.s)
   }
 
-  getLanes(): Lane[] {
-    return this.center ? [...this.left, this.center, ...this.right] : [...this.left, ...this.right]
+  /**
+   * Returns all lanes in this lane section.
+   * @returns all lanes sorted by id in this lane section
+   */
+  public getLanes(): Lane[] {
+    const lanes = this.center ? [...this.left, this.center, ...this.right] : [...this.left, ...this.right]
+    return lanes.sort((a, b) => Number(a.id) - Number(b.id))
   }
 
-  processLanes(referenceLine: ReferenceLine) {
+  /**
+   * Returns the lane with the given id.
+   * @param id the id of the lane
+   * @returns the lane with the given id
+   */
+  public getLaneById(id: string): Lane | undefined {
+    return this.getLanes().find(lane => lane.id === id)
+  }
+
+  /**
+   * Processes the lanes in this lane section.
+   * @param referenceLine the reference line
+   */
+  public processLanes(referenceLine: ReferenceLine) {
     const leftLanes = this.left.sort((a, b) => Number(a.id) - Number(b.id))
     const rightLanes = this.right.sort((a, b) => Number(b.id) - Number(a.id))
 
@@ -220,27 +313,29 @@ export class LaneSection implements ILaneSection {
     this.center?.setBoundaryLine(referenceLine.map(p => p.getPositionOfCenterLane()))
   }
 
-  getBoundaries(): Boundary[] {
+  public getBoundaries(): Boundary[] {
     return this.boundaries
   }
 
-  getCenterLines(): ReferenceLine[] {
+  public getCenterLines(): ReferenceLine[] {
     return this.centerLines
   }
 }
 
 export default class Lanes implements ILanes {
+  private road: Road
   public laneOffsets: LaneOffset[] = []
   public laneSections: LaneSection[] = []
 
-  constructor(rawLanes: RawLanes) {
+  constructor(rawLanes: RawLanes, road: Road) {
+    this.road = road
     for (const rawLaneOffset of arrayize(rawLanes.laneOffset)) {
       const laneOffset = new LaneOffset(rawLaneOffset)
       this.laneOffsets.push(laneOffset)
     }
 
     for (const rawLaneSection of arrayize(rawLanes.laneSection)) {
-      const laneSection = new LaneSection(rawLaneSection)
+      const laneSection = new LaneSection(rawLaneSection, this.road)
       this.laneSections.push(laneSection)
     }
   }

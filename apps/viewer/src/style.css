@@ -22,3 +22,7 @@ body {
 .n-collapse .n-collapse-item .n-collapse-item .n-collapse-item__content-wrapper {
   padding: 0px 0px 0px 14px;
 }
+
+.n-divider:not(.n-divider--vertical) {
+  margin: 8px 0px;
+}

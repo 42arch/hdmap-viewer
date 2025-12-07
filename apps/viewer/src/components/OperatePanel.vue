@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import type { TreeOption, UploadFileInfo } from 'naive-ui'
+import type { Level } from '@/libs/types'
 import { CaretRight } from '@vicons/fa'
 import { NButton, NCheckbox, NCollapse, NCollapseItem, NGrid, NGridItem, NIcon, NScrollbar, NSelect, NTree, NUpload, useThemeVars } from 'naive-ui'
 import OpenDrive from 'opendrive-parser'
 import { storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
-import { useAppStore } from '../store'
+import { useAppStore } from '@/store'
 
 const themeVars = useThemeVars()
 const store = useAppStore()
-const { viewer, roads, openDriveContent } = storeToRefs(store)
+const { viewer, openDrive, openDriveContent } = storeToRefs(store)
 const precision = ref(1)
 const precisionOptions = [{
   label: 'High (0.04)',
@@ -27,21 +28,15 @@ watch(precision, () => {
     return
 
   viewer.value.clear()
-  const { referenceLines, roads } = parseOpenDrive(openDriveContent.value!, precision.value)
-
-  viewer.value.addReferenceLines(referenceLines)
-  store.setRoads(roads)
-  viewer.value.addRoads(roads)
+  const openDrive = parseOpenDrive(openDriveContent.value!, precision.value)
+  store.setOpenDrive(openDrive)
+  viewer.value.setOpenDrive(openDrive)
 })
 
 function parseOpenDrive(content: string, precision: number) {
   const openDrive = new OpenDrive(content, precision)
   openDrive.process()
-
-  const referenceLines = openDrive.getReferenceLines()
-  const roads = openDrive.getRoads()
-
-  return { referenceLines, roads }
+  return openDrive
 }
 
 function handleChange({ file }: { file: UploadFileInfo }) {
@@ -52,13 +47,10 @@ function handleChange({ file }: { file: UploadFileInfo }) {
     const content = event.target?.result as string
     if (content) {
       store.setOpenDriveContent(content)
-      const { referenceLines, roads } = parseOpenDrive(content, precision.value)
+      const openDrive = parseOpenDrive(content, precision.value)
       viewer.value.clear()
-      viewer.value.addReferenceLines(referenceLines)
-      store.setRoads(roads)
-      viewer.value.addRoads(roads)
-      // viewer.value.addLanes(roads)
-      // viewer.value.addLaneAreas(roads)
+      store.setOpenDrive(openDrive)
+      viewer.value.setOpenDrive(openDrive)
     }
   }
 
@@ -71,7 +63,7 @@ function nodeProps({ option }: { option: TreeOption }) {
       // viewer.value?.setSelectedLane(option.key as string)
     },
     onMouseover() {
-      viewer.value?.hm.setHighlight(option.level as 'road' | 'section' | 'lane', option.key as string, 'panel')
+      viewer.value?.hm.setHighlight(option.level as Level, option.key as string, 'panel')
     },
     onMouseout() {
       viewer.value?.hm.clear('panel')
@@ -80,7 +72,9 @@ function nodeProps({ option }: { option: TreeOption }) {
 }
 
 const roadNetworkData = computed(() => {
-  return roads.value.map((road) => {
+  if (!openDrive.value)
+    return []
+  return openDrive.value.getRoads().map((road) => {
     return {
       label: road.name || road.id,
       key: `${road.id}`,
@@ -89,13 +83,13 @@ const roadNetworkData = computed(() => {
       children: road.getLaneSections().map((section) => {
         return {
           label: String(section.s),
-          key: `${road.id}-${section.s}`,
+          key: `${road.id}_${section.s}`,
           value: section,
           level: 'section',
           children: section.getLanes().map((lane) => {
             return {
               label: `${lane.id}  (${lane.type})`,
-              key: `${road.id}-${section.s}-${lane.id}`,
+              key: `${road.id}_${section.s}_${lane.id}`,
               value: lane,
               level: 'lane',
               isLeaf: true,

@@ -1,4 +1,4 @@
-import type { Lane, ReferenceLine, Road } from 'opendrive-parser'
+import type { Lane, OpenDrive, ReferenceLine, Road } from 'opendrive-parser'
 import { AxesHelper, BufferGeometry, Clock, DoubleSide, Float32BufferAttribute, GridHelper, Group, Mesh, MeshBasicMaterial, NormalBlending, PerspectiveCamera, Raycaster, Scene, Vector2, Vector3, WebGLRenderer } from 'three'
 import { Line2, LineGeometry, LineMaterial, OrbitControls } from 'three/examples/jsm/Addons.js'
 import HighlightManager from './highlight-manager'
@@ -21,9 +21,10 @@ class Viewer {
 
   private isMouseOverCanvas: boolean = false
 
-  public roads: Road[] = []
+  public openDrive: OpenDrive | null = null
   public laneGroup: Group
   private laneBoundaryGroup: Group
+  private helperGroup: Group
 
   public hm: HighlightManager
 
@@ -62,6 +63,10 @@ class Viewer {
     this.laneGroup.name = 'lanes'
     this.laneBoundaryGroup = new Group()
     this.laneBoundaryGroup.name = 'laneBoundaries'
+    this.helperGroup = new Group()
+    this.helperGroup.name = 'helpers'
+    this.scene.add(this.helperGroup)
+
     this.hm = new HighlightManager(this)
 
     this.addHelper()
@@ -100,8 +105,7 @@ class Viewer {
   }
 
   animate(): void {
-    const delta = this.clock.getDelta()
-
+    // const delta = this.clock.getDelta()
     this.renderer.render(this.scene, this.camera)
     this.controls.update()
     window.requestAnimationFrame(this.animate.bind(this))
@@ -122,12 +126,19 @@ class Viewer {
   }
 
   addHelper(): void {
-    const axesHelper = new AxesHelper(100)
+    const axesHelper = new AxesHelper(10)
     axesHelper.translateY(0.01)
-    const gridHelper = new GridHelper(1000, 10, 0x303030, 0x303030)
+    const gridHelper = new GridHelper(100, 10, 0x303030, 0x303030)
     gridHelper.translateY(-0.01)
-    this.scene.add(gridHelper)
-    // this.scene.add(axesHelper)
+    this.helperGroup.add(gridHelper)
+    this.helperGroup.add(axesHelper)
+  }
+
+  // set OpenDRIVE data
+  setOpenDrive(openDrive: OpenDrive) {
+    this.openDrive = openDrive
+    this.addReferenceLines(openDrive.getReferenceLines())
+    this.addRoads(openDrive.getRoads())
   }
 
   addReferenceLines(referenceLines: ReferenceLine[]): void {
@@ -153,7 +164,7 @@ class Viewer {
   }
 
   addRoads(roads: Road[]): void {
-    this.roads = roads
+    // this.roads = roads
     for (const road of roads) {
       const laneSections = road.getLaneSections()
       for (const section of laneSections) {
@@ -191,7 +202,7 @@ class Viewer {
       polygonOffsetUnits: 1,
     })
     const mesh = new Mesh(geometry, material)
-    mesh.name = `${roadId}-${sectionS}-${lane.id}`
+    mesh.name = `${roadId}_${sectionS}_${lane.id}`
     this.laneGroup.add(mesh)
   }
 
@@ -213,49 +224,51 @@ class Viewer {
       blending: NormalBlending,
     })
     const line = new Line2(geometry, material)
-    line.name = `${roadId}-${sectionS}-${lane.id}`
+    line.name = `${roadId}_${sectionS}_${lane.id}`
     this.laneBoundaryGroup.add(line)
   }
 
-  addLanes(roads: Road[]): void {
-    const group = new Group()
-    group.name = 'lanes'
-    const material = new LineMaterial({
-      depthTest: true,
-      depthWrite: false,
-      color: 0xFFFFFF,
-      linewidth: 1,
-      opacity: 1.0,
-      transparent: true,
-      blending: NormalBlending,
-    })
+  // addLanes(roads: Road[]): void {
+  //   const group = new Group()
+  //   group.name = 'lanes'
+  //   const material = new LineMaterial({
+  //     depthTest: true,
+  //     depthWrite: false,
+  //     color: 0xFFFFFF,
+  //     linewidth: 1,
+  //     opacity: 1.0,
+  //     transparent: true,
+  //     blending: NormalBlending,
+  //   })
 
-    for (const road of roads) {
-      const laneSections = road.getLaneSections()
-      for (const laneSection of laneSections) {
-        const lanes = laneSection.getLanes()
+  //   for (const road of roads) {
+  //     const laneSections = road.getLaneSections()
+  //     for (const laneSection of laneSections) {
+  //       const lanes = laneSection.getLanes()
 
-        for (const lane of lanes) {
-          const boundaryLine = lane.getBoundaryLine()
-          const boundaryPositions = boundaryLine.map(p => new Vector3(p[0], p[2], -p[1]))
-          if (boundaryPositions.length < 2)
-            continue
+  //       for (const lane of lanes) {
+  //         const boundaryLine = lane.getBoundaryLine()
+  //         const boundaryPositions = boundaryLine.map(p => new Vector3(p[0], p[2], -p[1]))
+  //         if (boundaryPositions.length < 2)
+  //           continue
 
-          const geometry = new LineGeometry().setFromPoints(boundaryPositions)
+  //         const geometry = new LineGeometry().setFromPoints(boundaryPositions)
 
-          const line = new Line2(geometry, material)
-          group.add(line)
-        }
-      }
-    }
-    group.position.y = group.position.y + 0.01
-    this.scene.add(group)
-  }
+  //         const line = new Line2(geometry, material)
+  //         group.add(line)
+  //       }
+  //     }
+  //   }
+  //   group.position.y = group.position.y + 0.01
+  //   this.scene.add(group)
+  // }
 
   clear() {
     this.laneGroup.clear()
+    this.laneBoundaryGroup.clear()
     this.scene.remove(this.laneGroup)
-    this.scene.clear()
+    this.scene.remove(this.laneBoundaryGroup)
+    // this.scene.clear()
   }
 }
 
