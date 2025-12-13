@@ -103,43 +103,43 @@ class Road implements IRoad {
     return this.link
   }
 
-  public getPredecessor(): { type: 'road', element: Road } | { type: 'junction', element: Junction } | undefined {
-    const predecessor = this.link?.predecessor
-    if (!predecessor) {
-      return
-    }
-    if (predecessor.elementType === 'road') {
-      return {
-        type: 'road',
-        element: this.openDrive.getRoadById(predecessor.elementId) as Road,
-      }
-    }
-    else if (predecessor.elementType === 'junction') {
-      return {
-        type: 'junction',
-        element: this.openDrive.getJunctionById(predecessor.elementId) as Junction,
-      }
-    }
-  }
+  // public getPredecessor(): { type: 'road', element: Road } | { type: 'junction', element: Junction } | undefined {
+  //   const predecessor = this.link?.predecessor
+  //   if (!predecessor) {
+  //     return
+  //   }
+  //   if (predecessor.elementType === 'road') {
+  //     return {
+  //       type: 'road',
+  //       element: this.openDrive.getRoadById(predecessor.elementId) as Road,
+  //     }
+  //   }
+  //   else if (predecessor.elementType === 'junction') {
+  //     return {
+  //       type: 'junction',
+  //       element: this.openDrive.getJunctionById(predecessor.elementId) as Junction,
+  //     }
+  //   }
+  // }
 
-  public getSuccessor(): { type: 'road', element: Road } | { type: 'junction', element: Junction } | undefined {
-    const successor = this.link?.successor
-    if (!successor) {
-      return
-    }
-    if (successor.elementType === 'road') {
-      return {
-        type: 'road',
-        element: this.openDrive.getRoadById(successor.elementId) as Road,
-      }
-    }
-    else if (successor.elementType === 'junction') {
-      return {
-        type: 'junction',
-        element: this.openDrive.getJunctionById(successor.elementId) as Junction,
-      }
-    }
-  }
+  // public getSuccessor(): { type: 'road', element: Road } | { type: 'junction', element: Junction } | undefined {
+  //   const successor = this.link?.successor
+  //   if (!successor) {
+  //     return
+  //   }
+  //   if (successor.elementType === 'road') {
+  //     return {
+  //       type: 'road',
+  //       element: this.openDrive.getRoadById(successor.elementId) as Road,
+  //     }
+  //   }
+  //   else if (successor.elementType === 'junction') {
+  //     return {
+  //       type: 'junction',
+  //       element: this.openDrive.getJunctionById(successor.elementId) as Junction,
+  //     }
+  //   }
+  // }
 
   private addOffsetToReferenceLine() {
     for (const point of this.referenceLine) {

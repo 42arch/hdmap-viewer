@@ -1,4 +1,4 @@
-import type { Boundary, ILane, ILaneLink, ILaneOffset, ILanes, ILaneSection, ILaneWidth, IRoadMark, Position, ReferenceLine } from '../types'
+import type { Boundary, ILane, ILaneOffset, ILanes, ILaneSection, ILaneWidth, IRoadMark, Position, ReferenceLine } from '../types'
 import type { RawLane, RawLaneOffset, RawLanes, RawLaneSection, RawLaneWidth, RawRoadMark } from '../types/raw'
 import type Road from './road'
 import arrayize from '../utils/arrayize'
@@ -187,53 +187,6 @@ export class Lane implements ILane {
    */
   getUserId(): string {
     return `${this.road.id}_${this.laneSection.s}_${this.id}`
-  }
-
-  getPredecessors(): Lane[] {
-    const preElement = this.road.getPredecessor()
-    if (!preElement)
-      return []
-    if (preElement.type === 'junction') {
-      const junction = preElement.element
-      const predecessors = junction.getPrecessorLanes(this.road.id, this.id)
-      return predecessors
-    }
-    else if (preElement.type === 'road') {
-      if (!this.link)
-        return []
-      const preRoad = preElement.element
-      const cp = this.road.getLink()?.predecessor?.contactPoint
-      const section = cp === 'start' ? preRoad.getFirstLaneSection() : preRoad.getLastLaneSection()
-      const predecessor = section?.getLaneById(this.link?.predecessor.id)
-      return predecessor ? [predecessor] : []
-    }
-    else {
-      return []
-    }
-  }
-
-  getSuccessors() {
-    const sucElement = this.road.getSuccessor()
-    if (!sucElement)
-      return []
-    if (sucElement.type === 'junction') {
-      const junction = sucElement.element
-      const successors = junction.getSuccessorLanes(this.road.id, this.id)
-      return successors
-    }
-    else if (sucElement.type === 'road') {
-      if (!this.link)
-        return []
-      const sucRoad = sucElement.element
-      const cp = this.road.getLink()?.successor?.contactPoint
-      const section = cp === 'end' ? sucRoad.getLastLaneSection() : sucRoad.getFirstLaneSection()
-      const successor = section?.getLaneById(this.link?.successor.id)
-      return successor ? [successor] : []
-    }
-
-    else {
-      return []
-    }
   }
 }
 

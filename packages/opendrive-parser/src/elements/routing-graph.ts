@@ -1,7 +1,9 @@
 import type { LaneUserId } from '../types'
+import type { Junction } from './junction'
 import type { Lane } from './lanes'
 import type OpenDrive from './opendrive'
 import type { RoadLink } from './road'
+import type Road from './road'
 
 export interface GraphEdge {
   from: LaneUserId
@@ -29,8 +31,13 @@ class RoutingGraph {
     this.addNode(edge.from)
     this.addNode(edge.to)
 
-    this.successors.get(edge.from)!.push(edge.to)
-    this.predecessors.get(edge.to)!.push(edge.from)
+    // 避免重复边
+    if (!this.successors.get(edge.from)!.includes(edge.to)) {
+      this.successors.get(edge.from)!.push(edge.to)
+    }
+    if (!this.predecessors.get(edge.to)!.includes(edge.from)) {
+      this.predecessors.get(edge.to)!.push(edge.from)
+    }
   }
 
   public getSuccessors(laneId: LaneUserId): LaneUserId[] {
@@ -42,8 +49,8 @@ class RoutingGraph {
   }
 
   public build() {
-    console.log('build graph yyyyyy')
     const roads = this.openDrive.getRoads()
+    const junctions = this.openDrive.getJunctions()
     // register nodes
     for (const road of roads) {
       for (const laneSection of road.getLaneSections()) {
@@ -55,6 +62,20 @@ class RoutingGraph {
       }
     }
     // 2. Intra-Road (Sections)
+    this.processIntraRoads(roads)
+
+    // 3. Lane Link (Road-to-Road via Predecessor/Successor)
+    this.processLinkedRoads(roads)
+
+    // 4. Junction (Incomming Road -> Connectiong Road)
+    this.processJunctions(junctions)
+  }
+
+  public findShortestPath() {
+    // todo
+  }
+
+  private processIntraRoads(roads: Road[]) {
     for (const road of roads) {
       const sections = road.getLaneSections()
       for (let i = 0; i < sections.length - 1; i++) {
@@ -94,22 +115,6 @@ class RoutingGraph {
             })
           }
         }
-      }
-    }
-
-    // lane link (predecessor and successor)
-    for (const road of roads) {
-      const sections = road.getLaneSections()
-      if (sections.length === 0)
-        continue
-      const startLanes = road.getFirstLaneSection()?.getLanes() ?? []
-      const endLanes = road.getLastLaneSection()?.getLanes() ?? []
-
-      if (road.link?.predecessor && road.link.predecessor.elementType !== 'junction') {
-        this.processLink(startLanes, road.link.predecessor, true)
-      }
-      if (road.link?.successor && road.link.successor.elementType !== 'junction') {
-        this.processLink(endLanes, road.link.successor, false)
       }
     }
   }
@@ -158,18 +163,78 @@ class RoutingGraph {
         if (isPredecessor) {
           // Road Start
           this.addEdge({
-            from: tgt.getUserId(),
-            to: lane.getUserId(),
+            from: lane.getUserId(),
+            to: tgt.getUserId(),
             type: 'laneLink',
           })
         }
         else {
           // Road End
           this.addEdge({
-            from: lane.getUserId(),
-            to: tgt.getUserId(),
+            from: tgt.getUserId(),
+            to: lane.getUserId(),
             type: 'laneLink',
           })
+        }
+      }
+    }
+  }
+
+  private processLinkedRoads(roads: Road[]) {
+    for (const road of roads) {
+      const sections = road.getLaneSections()
+      if (sections.length === 0)
+        continue
+      const startLanes = road.getFirstLaneSection()?.getLanes() ?? []
+      const endLanes = road.getLastLaneSection()?.getLanes() ?? []
+
+      if (road.link?.predecessor && road.link.predecessor.elementType !== 'junction') {
+        this.processLink(startLanes, road.link.predecessor, true)
+      }
+      if (road.link?.successor && road.link.successor.elementType !== 'junction') {
+        this.processLink(endLanes, road.link.successor, false)
+      }
+    }
+  }
+
+  private processJunctions(junctions: Junction[]) {
+    for (const junction of junctions) {
+      for (const connection of junction.connections) {
+        const incomingRoad = this.openDrive.getRoadById(connection.incomingRoad)
+        const connectingRoad = this.openDrive.getRoadById(connection.connectingRoad)
+        if (!incomingRoad || !connectingRoad)
+          return
+
+        const incomingSection = connection.contactPoint === 'start'
+          ? incomingRoad.getFirstLaneSection()
+          : incomingRoad.getLastLaneSection()
+
+        const connectingSection = connectingRoad.getFirstLaneSection()
+        if (!incomingSection || !connectingSection)
+          return
+
+        const incomingLanes = incomingSection.getLanes()
+        const connectingLanes = connectingSection.getLanes()
+
+        for (const link of connection.laneLinks) {
+          const fromLane = incomingLanes.find(l => l.id === link.from)
+          const toLane = connectingLanes.find(l => l.id === link.to)
+          if (!fromLane || !toLane)
+            continue
+
+          // validate if the flow direction is valid
+          let isValidFlow = false
+          if (connection.contactPoint === 'end' && Number(fromLane.id) < 0)
+            isValidFlow = true
+          if (connection.contactPoint === 'start' && Number(fromLane.id) > 0)
+            isValidFlow = true
+          if (isValidFlow) {
+            this.addEdge({
+              from: fromLane.getUserId(),
+              to: toLane.getUserId(),
+              type: 'junction',
+            })
+          }
         }
       }
     }

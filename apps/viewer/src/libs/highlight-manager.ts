@@ -4,6 +4,14 @@ import type Viewer from './viewer'
 import { DoubleSide, Mesh, MeshBasicMaterial } from 'three'
 import { BufferGeometryUtils } from 'three/examples/jsm/Addons.js'
 
+interface HighlightParams {
+  level: Level
+  key: string
+  source: Source
+  predecessors: string[]
+  successors: string[]
+}
+
 class HighlightManager {
   private viewer: Viewer
   public highlightRoad: LaneAreaMesh | null = null
@@ -14,7 +22,7 @@ class HighlightManager {
 
   private currentSource: Source | null = null
   private currentKey: string | null = null
-  public highlightCallback: ((level: Level, key: string, source: Source) => void) | null = null
+  public highlightCallback: ((params?: HighlightParams) => void) | null = null
 
   constructor(viewer: Viewer) {
     this.viewer = viewer
@@ -245,52 +253,31 @@ class HighlightManager {
         break
     }
 
-    const predecessors = this.viewer.openDrive?.graph.getPredecessors(key)
-    const successors = this.viewer.openDrive?.graph.getSuccessors(key)
-    console.log('+++++++lane+++++++', key)
-    console.log('predecessors', predecessors)
-    console.log('successors', successors)
-    this.setHighlightPredecessors(predecessors ?? [])
-    this.setHighlightSuccessors(successors ?? [])
+    const predecessors = this.viewer.openDrive?.graph.getPredecessors(key) ?? []
+    const successors = this.viewer.openDrive?.graph.getSuccessors(key) ?? []
+    this.setHighlightPredecessors(predecessors)
+    this.setHighlightSuccessors(successors)
 
-    // const [roadKey, sectionKey, laneKey] = key?.split('_') || []
-    // if (roadKey) {
-    //   const road = this.viewer.openDrive?.getRoadById(roadKey)
-    //   if (!road)
-    //     return
-    //   const link = road.getLink()
-    //   if (!link)
-    //     return
-
-    //   if (sectionKey && road) {
-    //     const section = road.getLaneSectionByS(Number(sectionKey))
-
-    //     if (laneKey && section) {
-    //       const lane = section.getLaneById(laneKey)
-    //       const predecessors = lane?.getPredecessors()
-    //       const successors = lane?.getSuccessors()
-    //       console.log('+++++++lane+++++++', lane?.getUserId())
-    //       console.log('predecessor', predecessors?.map(lane => lane.getUserId()))
-    //       console.log('successor', successors?.map(lane => lane.getUserId()))
-    //       this.setHighlightPredecessors(predecessors?.map(lane => lane.getUserId()) || [])
-    //       this.setHighlightSuccessors(successors?.map(lane => lane.getUserId()) || [])
-    //     }
-    //   }
-    // }
-
-    this.highlightCallback?.(level, key, source)
+    this.highlightCallback?.({
+      level,
+      key,
+      source,
+      predecessors,
+      successors,
+    })
 
     this.currentSource = source
     this.currentKey = key
   }
 
-  onHighlight(callback: (level: Level, key: string | null, source: Source) => void) {
+  onHighlight(callback: (params?: HighlightParams) => void) {
     this.highlightCallback = callback
   }
 
   clear(source: Source) {
     if (this.currentSource === source) {
       // this.viewer.scene.remove(this.highlightGroup)
+      this.highlightCallback?.()
       this.clearHighlightRoad()
       this.clearHighlightSection()
       this.clearHighlightLane()
