@@ -1,7 +1,7 @@
 {
-  "name": "viewer",
+  "name": "hdmap-viewer",
   "type": "module",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "private": true,
   "scripts": {
     "dev": "vite",
@@ -14,6 +14,7 @@
     "naive-ui": "^2.43.1",
     "opendrive-parser": "workspace:*",
     "pinia": "^3.0.3",
+    "proj4": "^2.20.2",
     "three": "^0.180.0",
     "vue": "^3.5.22"
   },

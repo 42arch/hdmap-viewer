@@ -2,13 +2,13 @@
 import type { TreeOption, UploadFileInfo } from 'naive-ui'
 import type { Level } from '@/libs/types'
 import { CaretRight } from '@vicons/fa'
-import { NButton, NCheckbox, NCollapse, NCollapseItem, NGrid, NGridItem, NIcon, NScrollbar, NSelect, NTree, NUpload, useThemeVars } from 'naive-ui'
+import { NButton, NCard, NCheckbox, NCollapse, NCollapseItem, NGrid, NGridItem, NIcon, NScrollbar, NSelect, NTree, NUpload } from 'naive-ui'
 import OpenDrive from 'opendrive-parser'
 import { storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { useAppStore } from '@/store'
+import AppTitle from './AppTitle.vue'
 
-const themeVars = useThemeVars()
 const store = useAppStore()
 const { viewer, openDrive, openDriveContent } = storeToRefs(store)
 const precision = ref(1)
@@ -51,6 +51,7 @@ function handleChange({ file }: { file: UploadFileInfo }) {
       viewer.value.clear()
       store.setOpenDrive(openDrive)
       viewer.value.setOpenDrive(openDrive)
+      viewer.value.vm.fitToCamera()
     }
   }
 
@@ -100,10 +101,27 @@ const roadNetworkData = computed(() => {
     }
   })
 })
+
+function handleReferenceLine(v: boolean) {
+  viewer.value?.vm.toggleReferenceLines(v)
+}
+
+function handleRoads(v: boolean) {
+  viewer.value?.vm.toggleRoads(v)
+}
+
+function handleRoadmarks(v: boolean) {
+  viewer.value?.vm.toggleRoadmarks(v)
+}
+
+function handleHelper(v: boolean) {
+  viewer.value?.vm.toggleHelper(v)
+}
 </script>
 
 <template>
-  <div class="operate-panel" :style="{ background: themeVars.bodyColor, borderColor: themeVars.borderColor }">
+  <NCard class="operate-panel" content-style="padding: 0">
+    <AppTitle />
     <NCollapse>
       <template #arrow>
         <NIcon size="14">
@@ -116,13 +134,16 @@ const roadNetworkData = computed(() => {
       <NCollapseItem title="View Options" name="2">
         <NGrid :y-gap="4" :cols="1">
           <NGridItem>
-            <NCheckbox size="small" label="Road Area" />
+            <NCheckbox size="small" label="Roads" :default-checked="true" @update:checked="handleRoads" />
           </NGridItem>
           <NGridItem>
-            <NCheckbox size="small" label="Lane Line" />
+            <NCheckbox size="small" label="Roadmarks" :default-checked="true" @update:checked="handleRoadmarks" />
           </NGridItem>
           <NGridItem>
-            <NCheckbox size="small" label="Reference Line" />
+            <NCheckbox size="small" label="Reference Lines" :default-checked="true" @update:checked="handleReferenceLine" />
+          </NGridItem>
+          <NGridItem>
+            <NCheckbox size="small" label="Grid Helper" :default-checked="true" @update:checked="handleHelper" />
           </NGridItem>
         </NGrid>
       </NCollapseItem>
@@ -139,18 +160,18 @@ const roadNetworkData = computed(() => {
     <div class="upload">
       <NUpload :default-upload="false" :show-file-list="false" accept=".xodr" @change="handleChange">
         <NButton size="tiny" class="upload-btn">
-          上传文件
+          Upload File
         </NButton>
       </NUpload>
     </div>
-  </div>
+  </NCard>
 </template>
 
 <style scoped>
 .operate-panel {
   position: absolute;
   top: 10px;
-  left: 10px;
+  right: 10px;
   width: 240px;
   border-width: 1px;
   border-style: solid;
@@ -160,7 +181,6 @@ const roadNetworkData = computed(() => {
 
 .upload {
   position: relative;
-  width: 80%;
   margin-top: 10px;
   display: flex;
   justify-content: center;
@@ -168,6 +188,6 @@ const roadNetworkData = computed(() => {
 }
 
 .upload-btn {
-  width: 240px;
+  width: 220px;
 }
 </style>

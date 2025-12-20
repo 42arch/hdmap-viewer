@@ -3,8 +3,9 @@ import { AxesHelper, BufferGeometry, Clock, DoubleSide, Float32BufferAttribute, 
 import { Line2, LineGeometry, LineMaterial, OrbitControls } from 'three/examples/jsm/Addons.js'
 import HighlightManager from './highlight-manager'
 import { boundaryToArea } from './utils'
+import ViewManager from './view-manager'
 
-export type LaneAreaMesh = Mesh<BufferGeometry, MeshBasicMaterial>
+export type RoadMesh = Mesh<BufferGeometry, MeshBasicMaterial>
 
 class Viewer {
   private width: number
@@ -12,9 +13,9 @@ class Viewer {
   private pixelRatio: number
   private dom: HTMLDivElement
   public scene: Scene
-  private camera: PerspectiveCamera
+  public camera: PerspectiveCamera
   private renderer: WebGLRenderer
-  private controls: OrbitControls
+  public controls: OrbitControls
   private clock: Clock
   private raycaster: Raycaster
   private mouse: Vector2
@@ -22,11 +23,12 @@ class Viewer {
   private isMouseOverCanvas: boolean = false
 
   public openDrive: OpenDrive | null = null
-  public laneGroup: Group
-  private laneBoundaryGroup: Group
-  private helperGroup: Group
+  public roadGroup: Group
+  public roadmarkGroup: Group
+  public referenceLineGroup: Group
 
   public hm: HighlightManager
+  public vm: ViewManager
 
   constructor(dom: HTMLDivElement) {
     this.dom = dom
@@ -40,7 +42,7 @@ class Viewer {
       0.001,
       10000,
     )
-    this.camera.position.set(10, 20, 40)
+    this.camera.position.set(0, 30, 30)
     this.scene.add(this.camera)
 
     this.renderer = new WebGLRenderer({
@@ -59,17 +61,16 @@ class Viewer {
     this.raycaster = new Raycaster()
     this.mouse = new Vector2()
 
-    this.laneGroup = new Group()
-    this.laneGroup.name = 'lanes'
-    this.laneBoundaryGroup = new Group()
-    this.laneBoundaryGroup.name = 'laneBoundaries'
-    this.helperGroup = new Group()
-    this.helperGroup.name = 'helpers'
-    this.scene.add(this.helperGroup)
+    this.roadGroup = new Group()
+    this.roadGroup.name = 'roads'
+    this.roadmarkGroup = new Group()
+    this.roadmarkGroup.name = 'roadmarks'
+    this.referenceLineGroup = new Group()
+    this.referenceLineGroup.name = 'reference-lines'
 
     this.hm = new HighlightManager(this)
+    this.vm = new ViewManager(this)
 
-    this.addHelper()
     this.resize()
     this.bindEvents()
     this.animate()
@@ -81,7 +82,7 @@ class Viewer {
     })
     this.dom.addEventListener('mouseleave', () => {
       this.isMouseOverCanvas = false
-      this.hm.clear('canvas')
+      // this.hm.clear('canvas')
     })
     this.dom.addEventListener('mousemove', (event) => {
       if (event.target !== this.renderer.domElement)
@@ -115,23 +116,18 @@ class Viewer {
     }
 
     this.raycaster.setFromCamera(this.mouse, this.camera)
-    const intersects = this.raycaster.intersectObjects(this.laneGroup.children, false)
+    const intersects = this.raycaster.intersectObjects(this.roadGroup.children, true)
     if (intersects.length) {
-      const intersected = intersects[0]!.object as LaneAreaMesh
-      this.hm.setHighlight('lane', intersected.name, 'canvas')
+      const intersected = intersects[0]!.object as RoadMesh
+      const position = intersects[0]?.point
+      if (!position)
+        return
+
+      this.hm.setHighlight('lane', intersected.name, 'canvas', position)
     }
     else {
       this.hm.clear('canvas')
     }
-  }
-
-  addHelper(): void {
-    const axesHelper = new AxesHelper(10)
-    axesHelper.translateY(0.01)
-    const gridHelper = new GridHelper(100, 10, 0x303030, 0x303030)
-    gridHelper.translateY(-0.01)
-    this.helperGroup.add(gridHelper)
-    this.helperGroup.add(axesHelper)
   }
 
   // set OpenDRIVE data
@@ -142,11 +138,8 @@ class Viewer {
   }
 
   addReferenceLines(referenceLines: ReferenceLine[]): void {
-    const group = new Group()
-    group.name = 'referenceLines'
-
     for (const referenceLine of referenceLines) {
-      const positions = referenceLine.map(p => new Vector3(p.x, p.z, -p.y))
+      const positions = referenceLine.getPoints().map(p => new Vector3(p.x, p.z, -p.y))
       if (positions.length < 2)
         continue
 
@@ -154,13 +147,20 @@ class Viewer {
       const material = new LineMaterial({
         depthTest: true,
         depthWrite: false,
-        color: 0xFFFF00,
+        color: 0xE68816, // #e68816ff
         linewidth: 1,
+        opacity: 0.6,
+        transparent: true,
+        dashed: true,
+        dashSize: 100,
+        gapSize: 50,
+        blending: NormalBlending,
       })
       const line = new Line2(geometry, material)
-      group.add(line)
+      line.translateY(0.02)
+      this.referenceLineGroup.add(line)
     }
-    this.scene.add(group)
+    this.scene.add(this.referenceLineGroup)
   }
 
   addRoads(roads: Road[]): void {
@@ -175,8 +175,8 @@ class Viewer {
         }
       }
     }
-    this.scene.add(this.laneGroup)
-    this.scene.add(this.laneBoundaryGroup)
+    this.scene.add(this.roadGroup)
+    this.scene.add(this.roadmarkGroup)
   }
 
   addLaneArea(lane: Lane, roadId: string, sectionS: number) {
@@ -193,17 +193,14 @@ class Viewer {
     geometry.setAttribute('position', new Float32BufferAttribute(positions, 3))
     geometry.setIndex(indices)
     const material = new MeshBasicMaterial({
-      color: 0xCCCCCC,
+      color: 0xB3B3B3, // #b3b3b3ff
       side: DoubleSide,
-      depthWrite: false,
-      depthTest: false,
-      polygonOffset: true,
-      polygonOffsetFactor: 1,
-      polygonOffsetUnits: 1,
+      depthTest: true,
+      depthWrite: true,
     })
     const mesh = new Mesh(geometry, material)
     mesh.name = `${roadId}_${sectionS}_${lane.id}`
-    this.laneGroup.add(mesh)
+    this.roadGroup.add(mesh)
   }
 
   addLaneBoundary(lane: Lane, roadId: string, sectionS: number) {
@@ -225,50 +222,17 @@ class Viewer {
     })
     const line = new Line2(geometry, material)
     line.name = `${roadId}_${sectionS}_${lane.id}`
-    this.laneBoundaryGroup.add(line)
+    this.roadmarkGroup.add(line)
   }
 
-  // addLanes(roads: Road[]): void {
-  //   const group = new Group()
-  //   group.name = 'lanes'
-  //   const material = new LineMaterial({
-  //     depthTest: true,
-  //     depthWrite: false,
-  //     color: 0xFFFFFF,
-  //     linewidth: 1,
-  //     opacity: 1.0,
-  //     transparent: true,
-  //     blending: NormalBlending,
-  //   })
-
-  //   for (const road of roads) {
-  //     const laneSections = road.getLaneSections()
-  //     for (const laneSection of laneSections) {
-  //       const lanes = laneSection.getLanes()
-
-  //       for (const lane of lanes) {
-  //         const boundaryLine = lane.getBoundaryLine()
-  //         const boundaryPositions = boundaryLine.map(p => new Vector3(p[0], p[2], -p[1]))
-  //         if (boundaryPositions.length < 2)
-  //           continue
-
-  //         const geometry = new LineGeometry().setFromPoints(boundaryPositions)
-
-  //         const line = new Line2(geometry, material)
-  //         group.add(line)
-  //       }
-  //     }
-  //   }
-  //   group.position.y = group.position.y + 0.01
-  //   this.scene.add(group)
-  // }
-
   clear() {
-    this.laneGroup.clear()
-    this.laneBoundaryGroup.clear()
-    this.scene.remove(this.laneGroup)
-    this.scene.remove(this.laneBoundaryGroup)
-    // this.scene.clear()
+    this.roadGroup.clear()
+    this.roadmarkGroup.clear()
+    this.referenceLineGroup.clear()
+    this.scene.remove(this.roadGroup)
+    this.scene.remove(this.roadmarkGroup)
+    this.scene.remove(this.referenceLineGroup)
+    this.vm.clear()
   }
 }
 
