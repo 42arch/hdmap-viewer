@@ -3,7 +3,7 @@
   "private": true,
   "packageManager": "pnpm@10.7.1",
   "description": "The monorepo for hdmap parser and viewer",
-  "author": "42arch",
+  "author": "Ren Dan",
   "license": "ISC",
   "keywords": [],
   "engines": {
@@ -16,7 +16,7 @@
     "clean": "turbo run clean && rm -rf node_modules",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "turbo run build --filter=apps^... && changeset publish"
+    "release": "turbo run build --filter=./packages/opendrive-parser --dry-run && changeset publish"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^6.1.0",
