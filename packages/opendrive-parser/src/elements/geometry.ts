@@ -1,6 +1,6 @@
 import type { IArc, IBaseGeometry, IElevationProfile, ILine, IParamPoly3, ISpiral } from '../types'
 import type { RawGeometry } from '../types/raw'
-import ReferencePoint from './helpers/referencePoint'
+import ReferencePoint from './helpers/reference-point'
 
 class BaseGeometry implements IBaseGeometry {
   public hdg: number

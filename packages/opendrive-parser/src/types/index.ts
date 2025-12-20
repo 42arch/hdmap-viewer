@@ -1,13 +1,13 @@
-import type ReferencePoint from '../elements/helpers/referencePoint'
+import type Header from '../elements/header'
+import type ReferenceLine from '../elements/helpers/reference-line'
+import type ReferencePoint from '../elements/helpers/reference-point'
+import type RoutingGraph from '../elements/helpers/routing-graph'
 import type { Junction } from '../elements/junction'
 import type { LaneSection, Lane as LaneType } from '../elements/lanes'
 import type Road from '../elements/road'
-import type RoutingGraph from '../elements/routing-graph'
 
 export type LaneUserId = string
 export type Position = [number, number, number]
-
-export type ReferenceLine = ReferencePoint[]
 
 export type Lane = LaneType
 
@@ -15,7 +15,7 @@ export type ElementType = 'road' | 'junction'
 export type ContactPoint = 'start' | 'end'
 
 export interface IOpenDrive {
-  header: IHeader
+  header: Header
   roads: Road[]
   junctions: Junction[]
   graph: RoutingGraph
@@ -36,11 +36,18 @@ export interface IHeader {
   east: number
   west: number
   vendor: string
+  geoReference?: string
 }
 
 export interface Boundary {
   inner: Position[]
   outer: Position[]
+}
+
+export interface IReferenceLine {
+  points: ReferencePoint[]
+
+  getPoints: () => ReferencePoint[]
 }
 
 export interface IRoadLink {

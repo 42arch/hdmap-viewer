@@ -1,12 +1,12 @@
-import type ReferencePoint from '../elements/helpers/referencePoint'
-import type { IOpenDrive, ReferenceLine } from '../types'
+import type { IOpenDrive } from '../types'
 import type { RawOpenDrive } from '../types/raw'
+import type ReferenceLine from './helpers/reference-line'
 import { XMLParser } from 'fast-xml-parser'
 import Header from '../elements/header'
 import Road from '../elements/road'
 import arrayize from '../utils/arrayize'
+import RoutingGraph from './helpers/routing-graph'
 import { Junction } from './junction'
-import RoutingGraph from './routing-graph'
 
 class OpenDrive implements IOpenDrive {
   private step: number
@@ -15,7 +15,7 @@ class OpenDrive implements IOpenDrive {
   public junctions: Junction[] = []
   public graph: RoutingGraph
 
-  private referenceLines: ReferencePoint[][] = []
+  private referenceLines: ReferenceLine[] = []
 
   constructor(xml: string, step: number) {
     const xmlParser = new XMLParser({
@@ -47,13 +47,19 @@ class OpenDrive implements IOpenDrive {
   process(): void {
     for (const road of this.roads) {
       road.process(this.step)
-      this.referenceLines.push(road.getReferenceLine())
+      const referenceLine = road.getReferenceLine()
+      if (referenceLine) {
+        this.referenceLines.push(referenceLine)
+      }
     }
-    console.log('process')
     this.graph.build()
   }
 
-  getReferenceLines(): ReferenceLine[] {
+  public getHeader(): Header {
+    return this.header
+  }
+
+  public getReferenceLines(): ReferenceLine[] {
     return this.referenceLines
   }
 

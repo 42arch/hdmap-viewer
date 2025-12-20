@@ -1,4 +1,4 @@
-import type { Position } from "../../types"
+import type { Position } from '../../types'
 
 export default class ReferencePoint {
   public x: number
@@ -8,7 +8,7 @@ export default class ReferencePoint {
   public hdg: number
 
   private tangent: number
-  private sOfRoad: number
+  public sOfRoad: number
   private sOfLaneSection: number
   private offset: number
   private positionOfCenterLane: Position

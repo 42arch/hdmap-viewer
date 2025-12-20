@@ -12,7 +12,7 @@ export default class Header implements IHeader {
   public east: number
   public west: number
   public vendor: string
-  public geoReference: string
+  public geoReference?: string
 
   constructor(rawHeader: RawHeader) {
     this.revMajor = rawHeader.revMajor

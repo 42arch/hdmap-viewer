@@ -1,5 +1,6 @@
-import type { Boundary, ILane, ILaneOffset, ILanes, ILaneSection, ILaneWidth, IRoadMark, Position, ReferenceLine } from '../types'
+import type { Boundary, ILane, ILaneOffset, ILanes, ILaneSection, ILaneWidth, IRoadMark, Position } from '../types'
 import type { RawLane, RawLaneOffset, RawLanes, RawLaneSection, RawLaneWidth, RawRoadMark } from '../types/raw'
+import type ReferenceLine from './helpers/reference-line'
 import type Road from './road'
 import arrayize from '../utils/arrayize'
 
@@ -130,9 +131,10 @@ export class Lane implements ILane {
   generateBoundaries(referenceLine: ReferenceLine, mostSidePositions: Position[]) {
     const innerPositions = [...mostSidePositions]
     const updatedPositions: Position[] = []
+    const points = referenceLine.getPoints()
 
-    for (let i = 0; i < referenceLine.length; i++) {
-      const referencePoint = referenceLine[i]
+    for (let i = 0; i < points.length; i++) {
+      const referencePoint = points[i]
       const innerPosition = innerPositions[i]
 
       const tangent = referencePoint.getTangent()
@@ -243,11 +245,12 @@ export class LaneSection implements ILaneSection {
    * @param referenceLine the reference line
    */
   public processLanes(referenceLine: ReferenceLine) {
+    const points = referenceLine.getPoints()
     const leftLanes = this.left.sort((a, b) => Number(a.id) - Number(b.id))
     const rightLanes = this.right.sort((a, b) => Number(b.id) - Number(a.id))
 
-    let mostLeftPositions = referenceLine.map(p => p.getPositionOfCenterLane())
-    let mostRightPositions = referenceLine.map(p => p.getPositionOfCenterLane())
+    let mostLeftPositions = points.map(p => p.getPositionOfCenterLane())
+    let mostRightPositions = points.map(p => p.getPositionOfCenterLane())
 
     for (const lane of leftLanes) {
       const { boundary, mostSidePositions } = lane.generateBoundaries(referenceLine, mostLeftPositions)
@@ -263,7 +266,7 @@ export class LaneSection implements ILaneSection {
       mostRightPositions = mostSidePositions
     }
 
-    this.center?.setBoundaryLine(referenceLine.map(p => p.getPositionOfCenterLane()))
+    this.center?.setBoundaryLine(points.map(p => p.getPositionOfCenterLane()))
   }
 
   public getBoundaries(): Boundary[] {

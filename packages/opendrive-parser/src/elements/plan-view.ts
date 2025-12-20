@@ -1,6 +1,6 @@
 import type { IElevationProfile, IPlanView } from '../types'
 import type { RawPlanView } from '../types/raw'
-import type ReferencePoint from './helpers/referencePoint'
+import type ReferencePoint from './helpers/reference-point'
 import arrayize from '../utils/arrayize'
 import { Arc, Line, ParamPoly3, Spiral } from './geometry'
 
@@ -34,15 +34,22 @@ export default class PlanView implements IPlanView {
   sample(elevationProfile: IElevationProfile, step: number): ReferencePoint[] {
     const referencePoints: ReferencePoint[] = []
     let sStartRoad = 0
-    for (const geometry of this.geometries) {
+    for (let i = 0; i < this.geometries.length; i++) {
+      const geometry = this.geometries[i]
       const geometryLength = geometry.length
       const points = geometry.sample(elevationProfile, step)
       points.forEach((p) => {
         const roadS = p.s + sStartRoad
         p.setSOfRoad(roadS)
       })
-
-      referencePoints.push(...points)
+      if (i !== 0) {
+        const noZeroSPoints = points.filter(p => p.s !== 0)
+        referencePoints.push(...noZeroSPoints)
+      }
+      else {
+        referencePoints.push(...points)
+      }
+      // referencePoints.push(...points)
       sStartRoad += geometryLength
     }
 

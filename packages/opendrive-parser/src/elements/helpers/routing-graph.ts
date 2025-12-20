@@ -1,9 +1,9 @@
-import type { LaneUserId } from '../types'
-import type { Junction } from './junction'
-import type { Lane } from './lanes'
-import type OpenDrive from './opendrive'
-import type { RoadLink } from './road'
-import type Road from './road'
+import type { LaneUserId } from '../../types'
+import type { Junction } from '../junction'
+import type { Lane } from '../lanes'
+import type OpenDrive from '../opendrive'
+import type { RoadLink } from '../road'
+import type Road from '../road'
 
 export interface GraphEdge {
   from: LaneUserId
