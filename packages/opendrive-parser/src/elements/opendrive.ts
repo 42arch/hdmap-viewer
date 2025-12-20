@@ -39,7 +39,7 @@ class OpenDrive implements IOpenDrive {
 
   private parseJunctions(rawData: RawOpenDrive): void {
     for (const rawJunction of arrayize(rawData.junction)) {
-      const junction = new Junction(rawJunction, this)
+      const junction = new Junction(rawJunction)
       this.junctions.push(junction)
     }
   }

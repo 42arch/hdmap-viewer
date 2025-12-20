@@ -49,7 +49,6 @@ export default class PlanView implements IPlanView {
       else {
         referencePoints.push(...points)
       }
-      // referencePoints.push(...points)
       sStartRoad += geometryLength
     }
 

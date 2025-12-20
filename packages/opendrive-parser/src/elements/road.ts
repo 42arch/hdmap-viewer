@@ -148,7 +148,6 @@ class Road implements IRoad {
 
   private generateReferenceLine(step: number): void {
     const points = this.planView.sample(this.elevationProfile, step)
-    // points.sort((a, b) => a.getSOfRoad() - b.getSOfRoad())
 
     this.referenceLine = new ReferenceLine(points)
   }

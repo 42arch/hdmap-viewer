@@ -21,14 +21,12 @@ export class Connection implements IConnection {
 }
 
 export class Junction implements IJunction {
-  private openDrive: OpenDrive
   public type: string = 'junction'
   public id: string
   public name: string
   public connections: Connection[]
 
-  constructor(rawJunction: RawJunction, openDrive: OpenDrive) {
-    this.openDrive = openDrive
+  constructor(rawJunction: RawJunction) {
     this.id = rawJunction.id
     this.name = rawJunction.name
     this.connections = arrayize(rawJunction.connection).map(c => new Connection(c))
