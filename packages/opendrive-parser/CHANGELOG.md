@@ -1,5 +1,17 @@
 # opendrive-parser
 
+## 0.1.2
+
+### Patch Changes
+
+- Fix CI.
+
+## 0.1.1
+
+### Patch Changes
+
+- Code cleanup.
+
 ## 0.1.0
 
 ### Minor Changes

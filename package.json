@@ -16,7 +16,7 @@
     "clean": "turbo run clean && rm -rf node_modules",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "turbo run build --filter=./packages/opendrive-parser --dry-run && changeset publish"
+    "release": "turbo run build --filter=./packages/opendrive-parser && changeset publish"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^6.1.0",
