@@ -1,5 +1,5 @@
 import type { Lane, OpenDrive, ReferenceLine, Road } from 'opendrive-parser'
-import { AxesHelper, BufferGeometry, Clock, DoubleSide, Float32BufferAttribute, GridHelper, Group, Mesh, MeshBasicMaterial, NormalBlending, PerspectiveCamera, Raycaster, Scene, Vector2, Vector3, WebGLRenderer } from 'three'
+import { BufferGeometry, DoubleSide, Float32BufferAttribute, Group, Mesh, MeshBasicMaterial, NormalBlending, PerspectiveCamera, Raycaster, Scene, Vector2, Vector3, WebGLRenderer } from 'three'
 import { Line2, LineGeometry, LineMaterial, OrbitControls } from 'three/examples/jsm/Addons.js'
 import HighlightManager from './highlight-manager'
 import { boundaryToArea } from './utils'
@@ -16,7 +16,6 @@ class Viewer {
   public camera: PerspectiveCamera
   private renderer: WebGLRenderer
   public controls: OrbitControls
-  private clock: Clock
   private raycaster: Raycaster
   private mouse: Vector2
 
@@ -57,7 +56,6 @@ class Viewer {
     this.controls = new OrbitControls(this.camera, this.renderer.domElement)
     this.controls.enableDamping = false
 
-    this.clock = new Clock()
     this.raycaster = new Raycaster()
     this.mouse = new Vector2()
 
@@ -106,7 +104,6 @@ class Viewer {
   }
 
   animate(): void {
-    // const delta = this.clock.getDelta()
     this.renderer.render(this.scene, this.camera)
     this.controls.update()
     window.requestAnimationFrame(this.animate.bind(this))
