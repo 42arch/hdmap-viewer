@@ -1,111 +1,99 @@
-# HDMAP Viewer Monorepo
+# HD Map Viewer & Parser Monorepo
 
-一个用于高精地图解析与可视化的 Monorepo，包含：
+A monorepo for parsing and visualizing High-Definition (HD) Maps, primarily focused on OpenDRIVE. This project contains a visualization application and standalone parser libraries.
 
-- apps/viewer：基于 Vue 3 + Vite 的 OpenDRIVE 可视化应用
-- packages/opendrive-parser：OpenDRIVE 解析库（TypeScript，使用 fast-xml-parser）
-- packages/apollo-map-parser：Apollo 地图解析库（占位，待完善）
+## Features
 
-本仓库使用 pnpm 工作区与 Turbo 进行多包管理与任务编排。
+- **OpenDRIVE Viewer**: A web-based 3D viewer for `.xodr` files.
+- **OpenDRIVE Parser**: A TypeScript library to parse OpenDRIVE XML files into JavaScript objects.
+- **Apollo Map Parser**: (Work in Progress) A library for parsing Apollo HD Maps.
 
-## 快速开始
+## Project Structure
 
-### 环境要求
-- Node.js ≥ 18
-- pnpm（已在仓库声明：`packageManager: pnpm@10.x`）
+This project is a monorepo managed with [pnpm workspaces](https://pnpm.io/workspaces) and [Turbo](https://turbo.build/).
 
-### 安装依赖
+- **apps/**
+  - `viewer`: A Vue 3 + Vite application using Three.js to visualize HD Maps.
+- **packages/**
+  - `opendrive-parser`: A TypeScript library for parsing OpenDRIVE files.
+  - `apollo-map-parser`: A placeholder library for future Apollo map parsing support.
+
+## Getting Started
+
+### Prerequisites
+
+- **Node.js**: >= 18
+- **pnpm**: >= 10 (This project uses pnpm as its package manager)
+
+### Installation
+
+Install dependencies from the root directory:
 
 ```bash
 pnpm install
 ```
 
-### 启动开发（全部应用）
+## Usage
+
+### Development
+
+To start the development server for all apps and packages:
 
 ```bash
 pnpm dev
 ```
 
-### 启动开发（仅 Viewer 应用）
+To start only the viewer application:
 
 ```bash
 cd apps/viewer
 pnpm dev
 ```
 
-### 构建
+### Building
+
+To build all apps and packages for production:
 
 ```bash
-# 构建所有包与应用（通过 Turbo）
-pnpm build
-
-# 或仅构建 Viewer
-cd apps/viewer
 pnpm build
 ```
 
-### 代码检查 & 清理
+To build a specific package (e.g., the parser):
+
+```bash
+pnpm build --filter=opendrive-parser
+```
+
+### Linting & Formatting
+
+To run linting across the codebase:
 
 ```bash
 pnpm lint
+```
+
+### Cleaning
+
+To clean `node_modules` and build artifacts:
+
+```bash
 pnpm clean
 ```
 
-## 仓库结构
+## Tech Stack
 
-```
-hdmap-viewer/
-├─ apps/
-│  └─ viewer/             # Vue 3 + Vite 可视化应用
-├─ packages/
-│  ├─ opendrive-parser/   # OpenDRIVE 解析库（TypeScript + tsup）
-│  └─ apollo-map-parser/  # Apollo 地图解析库（占位）
-├─ turbo.json             # Turbo 任务管道
-├─ pnpm-workspace.yaml    # pnpm 工作区配置
-├─ tsconfig.base.json     # TypeScript 基础配置
-└─ eslint.config.mjs      # ESLint 配置
-```
+- **Monorepo**: [Turbo](https://turbo.build/), [pnpm workspaces](https://pnpm.io/workspaces), [Changesets](https://github.com/changesets/changesets)
+- **Viewer App**:
+  - [Vue 3](https://vuejs.org/)
+  - [Vite](https://vitejs.dev/)
+  - [Three.js](https://threejs.org/) (3D Rendering)
+  - [Naive UI](https://www.naiveui.com/) (Component Library)
+  - [Pinia](https://pinia.vuejs.org/) (State Management)
+- **Parsers**:
+  - TypeScript
+  - [tsup](https://tsup.egoist.dev/) (Bundler)
+  - [fast-xml-parser](https://github.com/NaturalIntelligence/fast-xml-parser)
 
-## Viewer 应用说明（apps/viewer）
-
-- 技术栈：Vue 3、TypeScript、Vite、Pinia、Naive UI、Three.js
-- 运行脚本：
-  - `pnpm dev`：启动本地开发服务器
-  - `pnpm build`：类型检查 + 生产构建
-  - `pnpm preview`：本地预览打包产物
-
-功能概览：
-- 解析并展示 OpenDRIVE 地图几何、车道、对象等信息
-- 交互式视图与信息面板（参考 `src/components` 与 `src/libs`）
-
-## 解析库说明（packages）
-
-### opendrive-parser
-- 使用 `fast-xml-parser` 解析 `.xodr`/OpenDRIVE 文件
-- 打包工具：`tsup`
-- 脚本：
-  - `pnpm build`：打包至 `dist`
-  - `pnpm dev`：监听打包
-  - `pnpm lint`：代码检查
-
-使用（工作区内）示例：
-
-```ts
-import { parseOpenDrive } from 'opendrive-parser'
-
-const result = parseOpenDrive(xmlString)
-```
-
-> 具体 API 见 `packages/opendrive-parser/src`。
-
-### apollo-map-parser
-- 目前为占位包，后续将补充 Apollo 地图格式解析能力。
-
-## 开发建议
-- 统一使用 pnpm 管理依赖；子包依赖尽量通过 workspace 互联
-- 提交前运行 `pnpm lint`
-- 大型改动建议在包内独立验证后再联调 Viewer
-
-## 许可证
+## License
 
 ISC

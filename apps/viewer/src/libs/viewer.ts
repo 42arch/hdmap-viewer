@@ -1,13 +1,18 @@
 import type { Lane, OpenDrive, ReferenceLine, Road } from 'opendrive-parser'
+import type { Material } from 'three'
 import { BufferGeometry, DoubleSide, Float32BufferAttribute, Group, Mesh, MeshBasicMaterial, NormalBlending, PerspectiveCamera, Raycaster, Scene, Vector2, Vector3, WebGLRenderer } from 'three'
+import { ThreePerf } from 'three-perf'
 import { Line2, LineGeometry, LineMaterial, OrbitControls } from 'three/examples/jsm/Addons.js'
 import HighlightManager from './highlight-manager'
 import { boundaryToArea } from './utils'
 import ViewManager from './view-manager'
 
+const isDev = import.meta.env.DEV
+
 export type RoadMesh = Mesh<BufferGeometry, MeshBasicMaterial>
 
 class Viewer {
+  private pref?: ThreePerf
   private width: number
   private height: number
   private pixelRatio: number
@@ -69,6 +74,15 @@ class Viewer {
     this.hm = new HighlightManager(this)
     this.vm = new ViewManager(this)
 
+    if (isDev) {
+      this.pref = new ThreePerf({
+        domElement: document.body,
+        renderer: this.renderer,
+        anchorX: 'left',
+        anchorY: 'bottom',
+      })
+    }
+
     this.resize()
     this.bindEvents()
     this.animate()
@@ -104,9 +118,11 @@ class Viewer {
   }
 
   animate(): void {
+    this.pref?.begin()
     this.renderer.render(this.scene, this.camera)
     this.controls.update()
     window.requestAnimationFrame(this.animate.bind(this))
+    this.pref?.end()
 
     if (!this.isMouseOverCanvas) {
       return
@@ -135,24 +151,24 @@ class Viewer {
   }
 
   addReferenceLines(referenceLines: ReferenceLine[]): void {
+    const material = new LineMaterial({
+      depthTest: true,
+      depthWrite: false,
+      color: 0xE68816, // #e68816ff
+      linewidth: 1,
+      opacity: 0.6,
+      transparent: true,
+      dashed: true,
+      dashSize: 100,
+      gapSize: 50,
+      blending: NormalBlending,
+    })
     for (const referenceLine of referenceLines) {
       const positions = referenceLine.getPoints().map(p => new Vector3(p.x, p.z, -p.y))
       if (positions.length < 2)
         continue
 
       const geometry = new LineGeometry().setFromPoints(positions)
-      const material = new LineMaterial({
-        depthTest: true,
-        depthWrite: false,
-        color: 0xE68816, // #e68816ff
-        linewidth: 1,
-        opacity: 0.6,
-        transparent: true,
-        dashed: true,
-        dashSize: 100,
-        gapSize: 50,
-        blending: NormalBlending,
-      })
       const line = new Line2(geometry, material)
       line.translateY(0.02)
       this.referenceLineGroup.add(line)
@@ -161,14 +177,29 @@ class Viewer {
   }
 
   addRoads(roads: Road[]): void {
-    // this.roads = roads
+    const laneAreaMaterial = new MeshBasicMaterial({
+      color: 0xB3B3B3, // #b3b3b3ff
+      side: DoubleSide,
+      depthTest: true,
+      depthWrite: false,
+    })
+    const laneBoundaryMaterial = new LineMaterial({
+      depthTest: true,
+      depthWrite: false,
+      color: 0xFFFFFF,
+      linewidth: 1,
+      opacity: 1.0,
+      transparent: true,
+      blending: NormalBlending,
+    })
+
     for (const road of roads) {
       const laneSections = road.getLaneSections()
       for (const section of laneSections) {
         const lanes = section.getLanes()
         for (const lane of lanes) {
-          this.addLaneArea(lane, road.id, section.s)
-          this.addLaneBoundary(lane, road.id, section.s)
+          this.addLaneArea(lane, road.id, section.s, laneAreaMaterial)
+          this.addLaneBoundary(lane, road.id, section.s, laneBoundaryMaterial)
         }
       }
     }
@@ -176,7 +207,7 @@ class Viewer {
     this.scene.add(this.roadmarkGroup)
   }
 
-  addLaneArea(lane: Lane, roadId: string, sectionS: number) {
+  addLaneArea(lane: Lane, roadId: string, sectionS: number, material: MeshBasicMaterial) {
     const boundary = lane.getBoundary()
     const { vertices, indices } = boundaryToArea(boundary)
     const positions = new Float32Array(vertices.length)
@@ -189,18 +220,12 @@ class Viewer {
     const geometry = new BufferGeometry()
     geometry.setAttribute('position', new Float32BufferAttribute(positions, 3))
     geometry.setIndex(indices)
-    const material = new MeshBasicMaterial({
-      color: 0xB3B3B3, // #b3b3b3ff
-      side: DoubleSide,
-      depthTest: true,
-      depthWrite: true,
-    })
     const mesh = new Mesh(geometry, material)
     mesh.name = `${roadId}_${sectionS}_${lane.id}`
     this.roadGroup.add(mesh)
   }
 
-  addLaneBoundary(lane: Lane, roadId: string, sectionS: number) {
+  addLaneBoundary(lane: Lane, roadId: string, sectionS: number, material: LineMaterial) {
     const boundaryLine = lane.getBoundaryLine()
     const boundaryPositions = boundaryLine.map(p => new Vector3(p[0], p[2], -p[1]))
     if (boundaryPositions.length < 2) {
@@ -208,27 +233,30 @@ class Viewer {
     }
 
     const geometry = new LineGeometry().setFromPoints(boundaryPositions)
-    const material = new LineMaterial({
-      depthTest: true,
-      depthWrite: false,
-      color: 0xFFFFFF,
-      linewidth: 1,
-      opacity: 1.0,
-      transparent: true,
-      blending: NormalBlending,
-    })
+
     const line = new Line2(geometry, material)
     line.name = `${roadId}_${sectionS}_${lane.id}`
     this.roadmarkGroup.add(line)
   }
 
+  private disposeGroup(group: Group) {
+    group.traverse((obj: any) => {
+      if (obj.geometry)
+        obj.geometry.dispose()
+      if (obj.material) {
+        if (Array.isArray(obj.material))
+          obj.material.forEach((m: Material) => m.dispose())
+        else obj.material.dispose()
+      }
+    })
+    group.clear()
+  }
+
   clear() {
-    this.roadGroup.clear()
-    this.roadmarkGroup.clear()
-    this.referenceLineGroup.clear()
-    this.scene.remove(this.roadGroup)
-    this.scene.remove(this.roadmarkGroup)
-    this.scene.remove(this.referenceLineGroup)
+    this.disposeGroup(this.roadGroup)
+    this.disposeGroup(this.roadmarkGroup)
+    this.disposeGroup(this.referenceLineGroup)
+    this.scene.remove(this.roadGroup, this.roadmarkGroup, this.referenceLineGroup)
     this.vm.clear()
   }
 }
