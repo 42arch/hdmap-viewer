@@ -1,6 +1,7 @@
 import type { Boundary, ILane, ILaneOffset, ILanes, ILaneSection, ILaneWidth, IRoadMark, Position } from '../types'
 import type { RawLane, RawLaneOffset, RawLanes, RawLaneSection, RawLaneWidth, RawRoadMark } from '../types/raw'
 import type ReferenceLine from './helpers/reference-line'
+import type ReferencePoint from './helpers/reference-point'
 import type Road from './road'
 import arrayize from '../utils/arrayize'
 
@@ -128,17 +129,16 @@ export class Lane implements ILane {
     return w.a + w.b * ds + w.c * ds * ds + w.d * ds * ds * ds
   }
 
-  generateBoundaries(referenceLine: ReferenceLine, mostSidePositions: Position[]) {
+  generateBoundaries(referencePoints: ReferencePoint[], mostSidePositions: Position[]) {
     const innerPositions = [...mostSidePositions]
     const updatedPositions: Position[] = []
-    const points = referenceLine.getPoints()
 
-    for (let i = 0; i < points.length; i++) {
-      const referencePoint = points[i]
+    for (let i = 0; i < referencePoints.length; i++) {
+      const referencePoint = referencePoints[i]
       const innerPosition = innerPositions[i]
 
       const tangent = referencePoint.getTangent()
-      const sOfLaneSection = referencePoint.getSOfLaneSection()
+      const sOfLaneSection = referencePoint.getSOfRoad() - this.laneSection.s
       const laneWidth = this.getWidthByS(sOfLaneSection)
       const normal = this.side === 'left' ? tangent + Math.PI / 2 : tangent - Math.PI / 2
 
@@ -219,6 +219,8 @@ export class LaneSection implements ILaneSection {
       this.right.push(lane)
     }
 
+    // fix: precision issue
+    // this.s = Number(Number(rawLaneSection.s).toFixed(2))
     this.s = Number(rawLaneSection.s)
   }
 
@@ -246,27 +248,39 @@ export class LaneSection implements ILaneSection {
    */
   public processLanes(referenceLine: ReferenceLine) {
     const points = referenceLine.getPoints()
+    const laneSections = this.road.getLaneSections().sort((a, b) => a.s - b.s)
+    const currentIdx = laneSections.indexOf(this)
+    const nextSection = laneSections[currentIdx + 1]
+    const startS = this.s
+    const endS = nextSection ? nextSection.s : this.road.length
+
+    // Filter points: [startS, endS] to ensure continuity
+    const sectionPoints = points.filter((p) => {
+      const s = p.getSOfRoad()
+      return s >= startS - 1e-4 && s <= endS + 1e-4
+    })
+
     const leftLanes = this.left.sort((a, b) => Number(a.id) - Number(b.id))
     const rightLanes = this.right.sort((a, b) => Number(b.id) - Number(a.id))
 
-    let mostLeftPositions = points.map(p => p.getPositionOfCenterLane())
-    let mostRightPositions = points.map(p => p.getPositionOfCenterLane())
+    let mostLeftPositions = sectionPoints.map(p => p.getPositionOfCenterLane())
+    let mostRightPositions = sectionPoints.map(p => p.getPositionOfCenterLane())
 
     for (const lane of leftLanes) {
-      const { boundary, mostSidePositions } = lane.generateBoundaries(referenceLine, mostLeftPositions)
+      const { boundary, mostSidePositions } = lane.generateBoundaries(sectionPoints, mostLeftPositions)
       this.boundaries.push(boundary)
       lane.setBoundaryLine(mostSidePositions)
       mostLeftPositions = mostSidePositions
     }
 
     for (const lane of rightLanes) {
-      const { boundary, mostSidePositions } = lane.generateBoundaries(referenceLine, mostRightPositions)
+      const { boundary, mostSidePositions } = lane.generateBoundaries(sectionPoints, mostRightPositions)
       this.boundaries.push(boundary)
       lane.setBoundaryLine(mostSidePositions)
       mostRightPositions = mostSidePositions
     }
 
-    this.center?.setBoundaryLine(points.map(p => p.getPositionOfCenterLane()))
+    this.center?.setBoundaryLine(sectionPoints.map(p => p.getPositionOfCenterLane()))
   }
 
   public getBoundaries(): Boundary[] {
@@ -296,18 +310,37 @@ export default class Lanes implements ILanes {
     }
   }
 
-  calculateOffsetByS(s: number) {
-    const sortedLaneOffsets = [...this.laneOffsets].sort((a, b) => a.s - b.s)
+  // calculateOffsetByS(s: number) {
+  //   const sortedLaneOffsets = [...this.laneOffsets].sort((a, b) => a.s - b.s)
 
-    for (const offset of sortedLaneOffsets) {
-      const { s: startS, a, b, c, d } = offset
-      if (s >= startS) {
-        const ds = s - startS
-        const offset = a + b * ds + c * ds ** 2 + d * ds ** 3
-        return offset
-      }
+  //   for (const offset of sortedLaneOffsets) {
+  //     const { s: startS, a, b, c, d } = offset
+  //     if (s >= startS) {
+  //       const ds = s - startS
+  //       const offset = a + b * ds + c * ds ** 2 + d * ds ** 3
+  //       return offset
+  //     }
+  //   }
+  //   return 0
+  // }
+
+  calculateOffsetByS(s: number) {
+    if (!this.laneOffsets.length)
+      return 0
+    const offsets = [...this.laneOffsets].sort((a, b) => a.s - b.s)
+
+    // 关键：在第一个段开始之前，offset 应为 0
+    if (s < offsets[0].s)
+      return 0
+
+    let chosen = offsets[0]
+    for (const o of offsets) {
+      if (s >= o.s)
+        chosen = o
+      else break
     }
-    return 0
+    const ds = s - chosen.s
+    return chosen.a + chosen.b * ds + chosen.c * ds * ds + chosen.d * ds * ds * ds
   }
 
   public processLaneSections(referenceLine: ReferenceLine) {
