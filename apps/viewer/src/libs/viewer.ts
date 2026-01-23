@@ -1,11 +1,17 @@
 import type { Lane, OpenDrive, ReferenceLine, Road } from 'opendrive-parser'
 import type { Material } from 'three'
-import { BufferGeometry, DoubleSide, Float32BufferAttribute, Group, Mesh, MeshBasicMaterial, NormalBlending, PerspectiveCamera, Raycaster, Scene, Vector2, Vector3, WebGLRenderer } from 'three'
+import { BufferAttribute, BufferGeometry, DoubleSide, Float32BufferAttribute, Group, LineBasicMaterial, LineSegments, Mesh, MeshBasicMaterial, NormalBlending, PerspectiveCamera, Raycaster, Scene, Vector2, Vector3, WebGLRenderer } from 'three'
+import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-mesh-bvh'
 import { ThreePerf } from 'three-perf'
-import { Line2, LineGeometry, LineMaterial, OrbitControls } from 'three/examples/jsm/Addons.js'
+import { BufferGeometryUtils, OrbitControls } from 'three/examples/jsm/Addons.js'
 import HighlightManager from './highlight-manager'
 import { boundaryToArea } from './utils'
 import ViewManager from './view-manager'
+
+// Extend BufferGeometry and Mesh with BVH methods
+BufferGeometry.prototype.computeBoundsTree = computeBoundsTree
+BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree
+Mesh.prototype.raycast = acceleratedRaycast
 
 const isDev = import.meta.env.DEV
 
@@ -33,6 +39,8 @@ class Viewer {
 
   public hm: HighlightManager
   public vm: ViewManager
+
+  private laneIdMap: string[] = []
 
   constructor(dom: HTMLDivElement) {
     this.dom = dom
@@ -62,6 +70,8 @@ class Viewer {
     this.controls.enableDamping = false
 
     this.raycaster = new Raycaster()
+
+    this.raycaster.firstHitOnly = true
     this.mouse = new Vector2()
 
     this.roadGroup = new Group()
@@ -131,16 +141,33 @@ class Viewer {
     this.raycaster.setFromCamera(this.mouse, this.camera)
     const intersects = this.raycaster.intersectObjects(this.roadGroup.children, true)
     if (intersects.length) {
-      const intersected = intersects[0]!.object as RoadMesh
-      const position = intersects[0]?.point
-      if (!position)
+      const intersection = intersects[0]
+      if (!intersection)
         return
 
-      this.hm.setHighlight('lane', intersected.name, 'canvas', position)
+      const object = intersection.object as Mesh
+      const faceIndex = intersection.faceIndex
+
+      if (faceIndex !== undefined && object.geometry.getAttribute('laneIndex')) {
+        const laneIndexAttr = object.geometry.getAttribute('laneIndex')
+        const a = intersection.face?.a
+        if (a !== undefined) {
+          const idIndex = laneIndexAttr.getX(a)
+          const laneName = this.laneIdMap[idIndex]
+          if (laneName) {
+            this.hm.setHighlight('lane', laneName, 'canvas', intersection.point)
+            return
+          }
+        }
+      }
+      else if (object.name) {
+        // Fallback for unmerged objects or if something goes wrong
+        this.hm.setHighlight('lane', object.name, 'canvas', intersection.point)
+        return
+      }
     }
-    else {
-      this.hm.clear('canvas')
-    }
+
+    this.hm.clear('canvas')
   }
 
   // set OpenDRIVE data
@@ -151,28 +178,28 @@ class Viewer {
   }
 
   addReferenceLines(referenceLines: ReferenceLine[]): void {
-    const material = new LineMaterial({
-      depthTest: true,
-      depthWrite: false,
+    const material = new LineBasicMaterial({
       color: 0xE68816, // #e68816ff
-      linewidth: 1,
       opacity: 0.6,
       transparent: true,
-      dashed: true,
-      dashSize: 100,
-      gapSize: 50,
-      blending: NormalBlending,
     })
-    for (const referenceLine of referenceLines) {
-      const positions = referenceLine.getPoints().map(p => new Vector3(p.x, p.z, -p.y))
-      if (positions.length < 2)
-        continue
 
-      const geometry = new LineGeometry().setFromPoints(positions)
-      const line = new Line2(geometry, material)
+    const points: Vector3[] = []
+    for (const referenceLine of referenceLines) {
+      const linePoints = referenceLine.getPoints().map(p => new Vector3(p.x, p.z, -p.y))
+      for (let i = 0; i < linePoints.length - 1; i++) {
+        points.push(linePoints[i]!)
+        points.push(linePoints[i + 1]!)
+      }
+    }
+
+    if (points.length > 0) {
+      const geometry = new BufferGeometry().setFromPoints(points)
+      const line = new LineSegments(geometry, material)
       line.translateY(0.02)
       this.referenceLineGroup.add(line)
     }
+
     this.scene.add(this.referenceLineGroup)
   }
 
@@ -183,33 +210,71 @@ class Viewer {
       depthTest: true,
       depthWrite: false,
     })
-    const laneBoundaryMaterial = new LineMaterial({
-      depthTest: true,
-      depthWrite: false,
+    const laneBoundaryMaterial = new LineBasicMaterial({
       color: 0xFFFFFF,
-      linewidth: 1,
       opacity: 1.0,
       transparent: true,
       blending: NormalBlending,
     })
+
+    const laneGeometries: BufferGeometry[] = []
+    const laneBoundaryGeometries: BufferGeometry[] = []
+    this.laneIdMap = [] // Reset map
 
     for (const road of roads) {
       const laneSections = road.getLaneSections()
       for (const section of laneSections) {
         const lanes = section.getLanes()
         for (const lane of lanes) {
-          this.addLaneArea(lane, road.id, section.s, laneAreaMaterial)
-          this.addLaneBoundary(lane, road.id, section.s, laneBoundaryMaterial)
+          // Lane Area
+          const geometry = this.createLaneGeometry(lane)
+          if (geometry) {
+            const laneId = `${road.id}_${section.s}_${lane.id}`
+            this.laneIdMap.push(laneId)
+            const index = this.laneIdMap.length - 1
+
+            // Add custom attribute to store index
+            const count = geometry.getAttribute('position').count
+            const indexArray = new Float32Array(count).fill(index)
+            geometry.setAttribute('laneIndex', new BufferAttribute(indexArray, 1))
+
+            laneGeometries.push(geometry)
+          }
+
+          // Lane Boundary
+          const boundaryGeom = this.createLaneBoundaryGeometry(lane)
+          if (boundaryGeom) {
+            laneBoundaryGeometries.push(boundaryGeom)
+          }
         }
       }
     }
+
+    if (laneGeometries.length > 0) {
+      const mergedGeometry = BufferGeometryUtils.mergeGeometries(laneGeometries)
+      mergedGeometry.computeBoundsTree()
+
+      const mesh = new Mesh(mergedGeometry, laneAreaMaterial)
+      mesh.name = 'merged_road_network'
+      this.roadGroup.add(mesh)
+    }
+
+    if (laneBoundaryGeometries.length > 0) {
+      const mergedLinesGeometry = BufferGeometryUtils.mergeGeometries(laneBoundaryGeometries)
+      const lineSegments = new LineSegments(mergedLinesGeometry, laneBoundaryMaterial)
+      this.roadmarkGroup.add(lineSegments)
+    }
+
     this.scene.add(this.roadGroup)
     this.scene.add(this.roadmarkGroup)
   }
 
-  addLaneArea(lane: Lane, roadId: string, sectionS: number, material: MeshBasicMaterial) {
+  public createLaneGeometry(lane: Lane): BufferGeometry | null {
     const boundary = lane.getBoundary()
     const { vertices, indices } = boundaryToArea(boundary)
+    if (vertices.length === 0)
+      return null
+
     const positions = new Float32Array(vertices.length)
     for (let i = 0; i < vertices.length / 3; i++) {
       positions[i * 3] = vertices[i * 3]!
@@ -220,29 +285,37 @@ class Viewer {
     const geometry = new BufferGeometry()
     geometry.setAttribute('position', new Float32BufferAttribute(positions, 3))
     geometry.setIndex(indices)
-    const mesh = new Mesh(geometry, material)
-    mesh.name = `${roadId}_${sectionS}_${lane.id}`
-    this.roadGroup.add(mesh)
+    return geometry
   }
 
-  addLaneBoundary(lane: Lane, roadId: string, sectionS: number, material: LineMaterial) {
+  createLaneBoundaryGeometry(lane: Lane): BufferGeometry | null {
     const boundaryLine = lane.getBoundaryLine()
-    const boundaryPositions = boundaryLine.map(p => new Vector3(p[0], p[2], -p[1]))
-    if (boundaryPositions.length < 2) {
-      return
+    if (boundaryLine.length < 2) {
+      return null
     }
 
-    const geometry = new LineGeometry().setFromPoints(boundaryPositions)
+    const segments: Vector3[] = []
+    for (let i = 0; i < boundaryLine.length - 1; i++) {
+      const p1 = boundaryLine[i]!
+      const p2 = boundaryLine[i + 1]!
+      segments.push(new Vector3(p1[0], p1[2], -p1[1]))
+      segments.push(new Vector3(p2[0], p2[2], -p2[1]))
+    }
 
-    const line = new Line2(geometry, material)
-    line.name = `${roadId}_${sectionS}_${lane.id}`
-    this.roadmarkGroup.add(line)
+    if (segments.length === 0)
+      return null
+
+    const geometry = new BufferGeometry().setFromPoints(segments)
+    return geometry
   }
 
   private disposeGroup(group: Group) {
     group.traverse((obj: any) => {
-      if (obj.geometry)
+      if (obj.geometry) {
+        if (obj.geometry.disposeBoundsTree)
+          obj.geometry.disposeBoundsTree()
         obj.geometry.dispose()
+      }
       if (obj.material) {
         if (Array.isArray(obj.material))
           obj.material.forEach((m: Material) => m.dispose())
@@ -262,3 +335,4 @@ class Viewer {
 }
 
 export default Viewer
+

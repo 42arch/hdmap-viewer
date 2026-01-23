@@ -1,3 +1,4 @@
+import type { Lane } from 'opendrive-parser'
 import type { Vector3 } from 'three'
 import type { Level, Source } from './types'
 import type { RoadMesh } from './viewer'
@@ -43,6 +44,26 @@ class HighlightManager {
     this.viewer = viewer
   }
 
+  private getLaneFromId(laneId: string): Lane | undefined {
+    const parts = laneId.split('_')
+    if (parts.length < 3) return undefined
+    
+    // The format is roadId_sectionS_laneId.
+    // However, roadId might contain underscores? Assuming standard format.
+    // Better logic: last part is laneId, second last is sectionS, rest is roadId.
+    const lId = parts.pop()!
+    const sS = parts.pop()!
+    const rId = parts.join('_')
+
+    const road = this.viewer.openDrive?.getRoadById(rId)
+    if (!road) return undefined
+
+    const section = road.getLaneSectionByS(Number(sS))
+    if (!section) return undefined
+
+    return section.getLaneById(lId)
+  }
+
   clearHighlightLane() {
     if (this.highlightLane) {
       this.viewer.scene.remove(this.highlightLane)
@@ -58,19 +79,27 @@ class HighlightManager {
       return
     }
 
-    const mesh = this.viewer.roadGroup.getObjectByName(laneId) as RoadMesh
-    if (!mesh) {
+    const lane = this.getLaneFromId(laneId)
+    if (!lane) {
       this.clearHighlightLane()
       return
     }
+
+    const geometry = this.viewer.createLaneGeometry(lane)
+    if (!geometry) return
 
     const [roadKey, sectionKey] = laneId.split('_')
     this.setHighlightRoad(roadKey!)
     this.setHighlightSection(`${roadKey}_${sectionKey}`)
 
-    this.highlightLane = mesh.clone()
-    this.highlightLane.material = this.highlightLane.material.clone()
-    this.highlightLane.material.color.set(0x0284C7) // #0284c7
+    const material = new MeshBasicMaterial({
+      color: 0x0284C7, // #0284c7
+      side: DoubleSide,
+      depthTest: true,
+      depthWrite: false,
+    })
+
+    this.highlightLane = new Mesh(geometry, material)
     this.highlightLane.position.y += 0.001
     this.viewer.scene.add(this.highlightLane)
   }
@@ -97,14 +126,15 @@ class HighlightManager {
 
     const laneGeometries = []
     const laneSections = road.getLaneSections()
-    const laneNames = laneSections.flatMap(section => section.getLanes().map(lane => `${roadId}_${section.s}_${lane.id}`))
-
-    for (const laneName of laneNames) {
-      const mesh = this.viewer.roadGroup.getObjectByName(laneName) as RoadMesh
-      const clonedMesh = mesh.clone()
-      clonedMesh.position.y += 0.001
-      laneGeometries.push(clonedMesh.geometry)
+    
+    for (const section of laneSections) {
+        for (const lane of section.getLanes()) {
+            const geom = this.viewer.createLaneGeometry(lane)
+            if (geom) laneGeometries.push(geom)
+        }
     }
+
+    if (laneGeometries.length === 0) return
 
     const merged = BufferGeometryUtils.mergeGeometries(laneGeometries)
     const material = new MeshBasicMaterial({
@@ -112,9 +142,6 @@ class HighlightManager {
       side: DoubleSide,
       depthTest: true,
       depthWrite: false,
-      // polygonOffset: true,
-      // polygonOffsetFactor: 1,
-      // polygonOffsetUnits: 1,
     })
     this.highlightRoad = new Mesh(merged, material)
     this.highlightRoad.name = `${roadId}`
@@ -131,7 +158,10 @@ class HighlightManager {
   }
 
   setHighlightSection(key: string) {
-    const [roadId, sectionS] = key.split('_')
+    const parts = key.split('_')
+    const sectionS = parts.pop()
+    const roadId = parts.join('_')
+
     if (!roadId) {
       this.clearHighlightSection()
       return
@@ -149,13 +179,13 @@ class HighlightManager {
     }
     const laneGeometries = []
     const lanes = laneSection.getLanes()
-    const laneNames = lanes.map(lane => `${roadId}_${sectionS}_${lane.id}`)
 
-    for (const laneName of laneNames) {
-      const mesh = this.viewer.roadGroup.getObjectByName(laneName) as RoadMesh
-      const clonedMesh = mesh.clone()
-      laneGeometries.push(clonedMesh.geometry)
+    for (const lane of lanes) {
+      const geom = this.viewer.createLaneGeometry(lane)
+      if (geom) laneGeometries.push(geom)
     }
+
+    if (laneGeometries.length === 0) return
 
     const merged = BufferGeometryUtils.mergeGeometries(laneGeometries)
     const material = new MeshBasicMaterial({
@@ -163,9 +193,6 @@ class HighlightManager {
       side: DoubleSide,
       depthTest: true,
       depthWrite: false,
-      // polygonOffset: true,
-      // polygonOffsetFactor: 1,
-      // polygonOffsetUnits: 1,
     })
     this.highlightSection = new Mesh(merged, material)
     this.highlightSection.position.y += 0.001
@@ -178,11 +205,14 @@ class HighlightManager {
       return
     const geometries = []
     for (const laneId of laneIds) {
-      const mesh = this.viewer.roadGroup.getObjectByName(laneId) as RoadMesh
-      const clonedMesh = mesh.clone()
-      clonedMesh.position.y += 0.001
-      geometries.push(clonedMesh.geometry)
+      const lane = this.getLaneFromId(laneId)
+      if (lane) {
+          const geom = this.viewer.createLaneGeometry(lane)
+          if (geom) geometries.push(geom)
+      }
     }
+
+    if (geometries.length === 0) return
 
     const merged = BufferGeometryUtils.mergeGeometries(geometries)
     const material = new MeshBasicMaterial({
@@ -211,11 +241,14 @@ class HighlightManager {
       return
     const geometries = []
     for (const laneId of laneIds) {
-      const mesh = this.viewer.roadGroup.getObjectByName(laneId) as RoadMesh
-      const clonedMesh = mesh.clone()
-      clonedMesh.position.y += 0.001
-      geometries.push(clonedMesh.geometry)
+      const lane = this.getLaneFromId(laneId)
+      if (lane) {
+          const geom = this.viewer.createLaneGeometry(lane)
+          if (geom) geometries.push(geom)
+      }
     }
+
+    if (geometries.length === 0) return
 
     const merged = BufferGeometryUtils.mergeGeometries(geometries)
     const material = new MeshBasicMaterial({
