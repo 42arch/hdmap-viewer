@@ -23,12 +23,22 @@ export class Line extends BaseGeometry implements ILine {
     super(geometry)
   }
 
-  sample(elevationsProfile: IElevationProfile, step: number): ReferencePoint[] {
+  sample(elevationsProfile: IElevationProfile, step: number, extraS: number[] = []): ReferencePoint[] {
     const referencePoints: ReferencePoint[] = []
+    
+    // Construct sample points
+    const sampleS = new Set<number>()
     const nums = Math.ceil(this.length / step)
     for (let i = 0; i <= nums; i++) {
-      const s = Math.min(i * step, this.length)
+      sampleS.add(Math.min(i * step, this.length))
+    }
+    extraS.forEach(s => {
+        if (s >= 0 && s <= this.length) sampleS.add(s)
+    })
+    
+    const sortedS = Array.from(sampleS).sort((a, b) => a - b)
 
+    for (const s of sortedS) {
       const z = elevationsProfile.getElevationByS(s + this.s)
       const x = this.x + s * Math.cos(this.hdg)
       const y = this.y + s * Math.sin(this.hdg)
@@ -49,25 +59,45 @@ export class Arc extends BaseGeometry implements IArc {
     this.curvature = Number(geometry.arc?.curvature)
   }
 
-  sample(elevationsProfile: IElevationProfile, step: number) {
+  sample(elevationsProfile: IElevationProfile, step: number, extraS: number[] = []) {
     const referencePoints: ReferencePoint[] = []
+    
+    const sampleS = new Set<number>()
     const nums = Math.ceil(this.length / step)
+    for (let i = 0; i <= nums; i++) {
+      sampleS.add(Math.min(i * step, this.length))
+    }
+    extraS.forEach(s => {
+        if (s >= 0 && s <= this.length) sampleS.add(s)
+    })
+    const sortedS = Array.from(sampleS).sort((a, b) => a - b)
+
     const curvature = this.curvature
 
-    for (let i = 0; i <= nums; i++) {
-      const s = Math.min(i * step, this.length)
-
+    for (const s of sortedS) {
       const z = elevationsProfile.getElevationByS(s + this.s)
-      const a = (2 / curvature) * Math.sin((s * curvature) / 2)
-      const hdg_ = this.hdg - Math.PI / 2
-      const alpha = (Math.PI - s * curvature) / 2 - hdg_
+      
+      let nx, ny, nHdg
 
-      const dx = -1 * a * Math.cos(alpha)
-      const dy = a * Math.sin(alpha)
-      const nx = this.x + dx
-      const ny = this.y + dy
-      const point = new ReferencePoint(nx, ny, z, s, this.hdg + s * curvature)
-      point.setTangent(this.hdg + s * curvature)
+      if (Math.abs(curvature) < 1e-9) {
+        // Treat as line to avoid divide by zero
+        nx = this.x + s * Math.cos(this.hdg)
+        ny = this.y + s * Math.sin(this.hdg)
+        nHdg = this.hdg
+      } else {
+        const a = (2 / curvature) * Math.sin((s * curvature) / 2)
+        const hdg_ = this.hdg - Math.PI / 2
+        const alpha = (Math.PI - s * curvature) / 2 - hdg_
+  
+        const dx = -1 * a * Math.cos(alpha)
+        const dy = a * Math.sin(alpha)
+        nx = this.x + dx
+        ny = this.y + dy
+        nHdg = this.hdg + s * curvature
+      }
+
+      const point = new ReferencePoint(nx, ny, z, s, nHdg)
+      point.setTangent(nHdg)
       referencePoints.push(point)
     }
     return referencePoints
@@ -85,35 +115,63 @@ export class Spiral extends BaseGeometry implements ISpiral {
     this.curvEnd = Number(geomtry.spiral?.curvEnd)
   }
 
-  sample(elevationsProfile: IElevationProfile, step: number) {
-    const { curvStart, curvEnd, hdg } = this
+  sample(elevationsProfile: IElevationProfile, step: number, extraS: number[] = []) {
+    const { curvStart, curvEnd, hdg, length, x, y, s: startS } = this
     const referencePoints: ReferencePoint[] = []
 
-    const nums = Math.ceil(this.length / step)
+    const cDot = (curvEnd - curvStart) / (length || 1)
+    
+    // Construct sample points
+    const sampleS = new Set<number>()
+    const nums = Math.ceil(length / step)
     for (let i = 0; i <= nums; i++) {
-      const s = Math.min(i * step, this.length)
+      sampleS.add(Math.min(i * step, length))
+    }
+    extraS.forEach(s => {
+        if (s >= 0 && s <= length) sampleS.add(s)
+    })
+    const sortedS = Array.from(sampleS).sort((a, b) => a - b)
 
-      const z = elevationsProfile.getElevationByS(s + this.s)
-      const a = (curvEnd - curvStart) / this.length
-      const ds = 0.1
-      let x_ = 0
-      let y_ = 0
-      let theta = 0
-      let localS = 0
-      while (localS < s) {
-        const kappa = curvStart + a * localS
-        theta += kappa * ds
-        x_ += Math.cos(theta) * ds
-        y_ += Math.sin(theta) * ds
-        localS += ds
+    // Integration state
+    let currentX = 0
+    let currentY = 0
+    let currentS = 0
+
+    const ds = 0.01
+
+    for (const targetS of sortedS) {
+      // Integrate from currentS to targetS
+      while (currentS < targetS) {
+        let d = ds
+        if (currentS + d > targetS) {
+          d = targetS - currentS
+        }
+        if (d < 1e-9) { 
+             currentS = targetS
+             break
+        }
+
+        const sMid = currentS + d / 2
+        const thetaMid = curvStart * sMid + 0.5 * cDot * sMid * sMid
+
+        currentX += Math.cos(thetaMid) * d
+        currentY += Math.sin(thetaMid) * d
+
+        currentS += d
       }
+
+      const thetaAtS = curvStart * targetS + 0.5 * cDot * targetS * targetS
+
       const cosH = Math.cos(hdg)
       const sinH = Math.sin(hdg)
-      const nx = this.x + x_ * cosH - y_ * sinH
-      const ny = this.y + x_ * sinH + y_ * cosH
-      const nHdg = hdg + theta
 
-      const point = new ReferencePoint(nx, ny, z, s, nHdg)
+      const nx = x + currentX * cosH - currentY * sinH
+      const ny = y + currentX * sinH + currentY * cosH
+      const nHdg = hdg + thetaAtS
+
+      const z = elevationsProfile.getElevationByS(targetS + startS)
+
+      const point = new ReferencePoint(nx, ny, z, targetS, nHdg)
       point.setTangent(nHdg)
       referencePoints.push(point)
     }
@@ -156,32 +214,32 @@ export class ParamPoly3 extends BaseGeometry implements IParamPoly3 {
     return b + 2 * c * p + 3 * d * p * p
   }
 
-  sample(elevationsProfile: IElevationProfile, step: number) {
+  sample(elevationsProfile: IElevationProfile, step: number, extraS: number[] = []) {
     const {
-      aU,
-      bU,
-      cU,
-      dU,
-      aV,
-      bV,
-      cV,
-      dV,
-      hdg,
-      length,
+      aU, bU, cU, dU,
+      aV, bV, cV, dV,
+      hdg, length,
     } = this
     const referencePoints: ReferencePoint[] = []
 
+    const sampleS = new Set<number>()
     const nums = Math.ceil(length / step)
+    for (let i = 0; i <= nums; i++) {
+      sampleS.add(Math.min(i * step, length))
+    }
+    extraS.forEach(s => {
+        if (s >= 0 && s <= length) sampleS.add(s)
+    })
+    const sortedS = Array.from(sampleS).sort((a, b) => a - b)
+
     const len = Math.max(length, 1e-9)
 
-    for (let i = 0; i <= nums; i++) {
-      const s = Math.min(i * step, length)
-
+    for (const s of sortedS) {
       let p: number
       if (this.pRange === 'normalized') {
         p = s / len
       }
-      else { // 'arcLength'
+      else { 
         p = s
       }
 

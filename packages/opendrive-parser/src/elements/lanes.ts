@@ -253,11 +253,23 @@ export class LaneSection implements ILaneSection {
     const nextSection = laneSections[currentIdx + 1]
     const startS = this.s
     const endS = nextSection ? nextSection.s : this.road.length
+    const isLastSection = !nextSection
 
     // Filter points: [startS, endS] to ensure continuity
+    // Use strict tolerances to handle double-sampling at section boundaries
     const sectionPoints = points.filter((p) => {
       const s = p.getSOfRoad()
-      return s >= startS - 1e-4 && s <= endS + 1e-4
+      
+      // Exclude points from the previous section (e.g., s = startS - 1e-4)
+      if (s < startS - 1e-5) return false
+
+      if (isLastSection) {
+        return s <= endS + 1e-5
+      } else {
+        // Exclude the exact start point of the next section (s = endS)
+        // But keep the pre-step point (s = endS - 1e-4)
+        return s < endS - 1e-5
+      }
     })
 
     const leftLanes = this.left.sort((a, b) => Number(a.id) - Number(b.id))
