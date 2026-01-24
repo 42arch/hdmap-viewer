@@ -2,7 +2,6 @@ import type { Lane, OpenDrive, ReferenceLine, Road } from 'opendrive-parser'
 import type { Material } from 'three'
 import { BufferAttribute, BufferGeometry, DoubleSide, Float32BufferAttribute, Group, LineBasicMaterial, LineSegments, Mesh, MeshBasicMaterial, NormalBlending, PerspectiveCamera, Raycaster, Scene, Vector2, Vector3, WebGLRenderer } from 'three'
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-mesh-bvh'
-import { ThreePerf } from 'three-perf'
 import { BufferGeometryUtils, OrbitControls } from 'three/examples/jsm/Addons.js'
 import HighlightManager from './highlight-manager'
 import { boundaryToArea } from './utils'
@@ -13,19 +12,16 @@ BufferGeometry.prototype.computeBoundsTree = computeBoundsTree
 BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree
 Mesh.prototype.raycast = acceleratedRaycast
 
-const isDev = import.meta.env.DEV
-
 export type RoadMesh = Mesh<BufferGeometry, MeshBasicMaterial>
 
 class Viewer {
-  private pref?: ThreePerf
   private width: number
   private height: number
   private pixelRatio: number
   private dom: HTMLDivElement
   public scene: Scene
   public camera: PerspectiveCamera
-  private renderer: WebGLRenderer
+  public renderer: WebGLRenderer
   public controls: OrbitControls
   private raycaster: Raycaster
   private mouse: Vector2
@@ -84,15 +80,6 @@ class Viewer {
     this.hm = new HighlightManager(this)
     this.vm = new ViewManager(this)
 
-    if (isDev) {
-      this.pref = new ThreePerf({
-        domElement: document.body,
-        renderer: this.renderer,
-        anchorX: 'left',
-        anchorY: 'bottom',
-      })
-    }
-
     this.resize()
     this.bindEvents()
     this.animate()
@@ -128,11 +115,11 @@ class Viewer {
   }
 
   animate(): void {
-    this.pref?.begin()
+    this.vm.begin()
     this.renderer.render(this.scene, this.camera)
     this.controls.update()
     window.requestAnimationFrame(this.animate.bind(this))
-    this.pref?.end()
+    this.vm.end()
 
     if (!this.isMouseOverCanvas) {
       return
@@ -335,4 +322,3 @@ class Viewer {
 }
 
 export default Viewer
-

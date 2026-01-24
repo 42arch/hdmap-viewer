@@ -125,6 +125,10 @@ function handleRoadmarks(v: boolean) {
 function handleHelper(v: boolean) {
   viewer.value?.vm.toggleHelper(v)
 }
+
+function handlePerfMonitor(v: boolean) {
+  viewer.value?.vm.togglePerfMonitor(v)
+}
 </script>
 
 <template>
@@ -152,6 +156,9 @@ function handleHelper(v: boolean) {
           </NGridItem>
           <NGridItem>
             <NCheckbox size="small" label="Grid Helper" :default-checked="true" @update:checked="handleHelper" />
+          </NGridItem>
+          <NGridItem>
+            <NCheckbox size="small" label="Performance Monitor" :default-checked="false" @update:checked="handlePerfMonitor" />
           </NGridItem>
         </NGrid>
       </NCollapseItem>

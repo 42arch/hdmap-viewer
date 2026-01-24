@@ -7,7 +7,9 @@ import OperatePanel from './components/OperatePanel.vue'
 
 const themeOverrides: GlobalThemeOverrides = {
   common: {
-    primaryColor: '#6B76A4', // #6B76A4
+    primaryColor: '#38BDF8',
+    primaryColorHover: '#7DD3FC',
+    primaryColorPressed: '#0EA5E9',
     bodyColor: '#1E1E1E',
     fontSize: '12px',
     borderRadius: '0px',

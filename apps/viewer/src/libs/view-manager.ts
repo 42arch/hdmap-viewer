@@ -1,15 +1,25 @@
 import type Viewer from './viewer'
 import { AxesHelper, Box3, GridHelper, Group, MathUtils, Vector3 } from 'three'
+import { ThreePerf } from 'three-perf'
 
 class ViewManager {
   private viewer: Viewer
   private helperGroup: Group
+  private pref: ThreePerf
 
   constructor(viewer: Viewer) {
     this.viewer = viewer
 
     this.helperGroup = new Group()
     this.helperGroup.name = 'helpers'
+
+    this.pref = new ThreePerf({
+      domElement: document.body,
+      renderer: this.viewer.renderer,
+      anchorX: 'left',
+      anchorY: 'bottom',
+    })
+    this.pref.visible = false
   }
 
   calculateBoundingBox() {
@@ -26,9 +36,10 @@ class ViewManager {
   }
 
   addHelper(size: Vector3, center: Vector3): void {
-    const gridSize = Math.max(size.x, size.z)
     const cellSize = 10
-    const divisions = gridSize / cellSize
+    const baseSize = Math.max(size.x, size.z)
+    const divisions = Math.ceil(baseSize / cellSize)
+    const gridSize = divisions * cellSize
 
     const axesHelper = new AxesHelper(10)
     axesHelper.position.set(center.x, center.y, center.z)
@@ -63,6 +74,18 @@ class ViewManager {
 
   toggleHelper(visible: boolean) {
     this.helperGroup.visible = visible
+  }
+
+  togglePerfMonitor(visible: boolean) {
+    this.pref.visible = visible
+  }
+
+  begin() {
+    this.pref.begin()
+  }
+
+  end() {
+    this.pref.end()
   }
 
   fitToCamera() {
