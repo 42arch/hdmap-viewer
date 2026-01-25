@@ -2,7 +2,7 @@
 import type { TreeOption, UploadFileInfo } from 'naive-ui'
 import type { Level } from '@/libs/types'
 import { CaretRight } from '@vicons/fa'
-import { NButton, NCard, NCheckbox, NCollapse, NCollapseItem, NGrid, NGridItem, NIcon, NScrollbar, NSelect, NTree, NUpload } from 'naive-ui'
+import { NButton, NCard, NCheckbox, NCollapse, NCollapseItem, NGrid, NGridItem, NIcon, NScrollbar, NSelect, NTree, NUpload, useMessage } from 'naive-ui'
 import OpenDrive from 'opendrive-parser'
 import { storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
@@ -10,7 +10,9 @@ import { useAppStore } from '@/store'
 import AppTitle from './AppTitle.vue'
 
 const store = useAppStore()
+const message = useMessage()
 const { viewer, openDrive, openDriveContent } = storeToRefs(store)
+const loading = ref(false)
 const precision = ref(1)
 const precisionOptions = [{
   label: 'High (0.04)',
@@ -40,19 +42,25 @@ function parseOpenDrive(content: string, precision: number) {
 }
 
 function handleChange({ file }: { file: UploadFileInfo }) {
+  loading.value = true
+  const t1 = performance.now()
   const reader = new FileReader()
   reader.onload = (event) => {
     if (!viewer.value)
       return
     const content = event.target?.result as string
     if (content) {
+      store.clear()
       store.setOpenDriveContent(content)
       const openDrive = parseOpenDrive(content, precision.value)
-      viewer.value.clear()
       store.setOpenDrive(openDrive)
       viewer.value.setOpenDrive(openDrive)
       viewer.value.vm.fitToCamera()
     }
+    const t2 = performance.now()
+    const total = t2 - t1
+    message.success(`Loaded in ${total.toFixed(2)}ms`)
+    loading.value = false
   }
 
   reader.readAsText(file.file as Blob)
@@ -117,6 +125,10 @@ function handleRoadmarks(v: boolean) {
 function handleHelper(v: boolean) {
   viewer.value?.vm.toggleHelper(v)
 }
+
+function handlePerfMonitor(v: boolean) {
+  viewer.value?.vm.togglePerfMonitor(v)
+}
 </script>
 
 <template>
@@ -145,6 +157,9 @@ function handleHelper(v: boolean) {
           <NGridItem>
             <NCheckbox size="small" label="Grid Helper" :default-checked="true" @update:checked="handleHelper" />
           </NGridItem>
+          <NGridItem>
+            <NCheckbox size="small" label="Performance Monitor" :default-checked="false" @update:checked="handlePerfMonitor" />
+          </NGridItem>
         </NGrid>
       </NCollapseItem>
       <NCollapseItem title="Road Network" name="3">
@@ -159,7 +174,7 @@ function handleHelper(v: boolean) {
 
     <div class="upload">
       <NUpload :default-upload="false" :show-file-list="false" accept=".xodr" @change="handleChange">
-        <NButton size="tiny" class="upload-btn">
+        <NButton size="tiny" :loading="loading" :disabled="loading" class="upload-btn">
           Upload File
         </NButton>
       </NUpload>

@@ -7,16 +7,11 @@ export const useAppStore = defineStore('app', () => {
   const openDriveContent = ref<string | null>(null)
   const openDrive = ref<OpenDrive | null>(null)
   const viewer = ref<Viewer | null>(null)
-  // const roads = ref<Road[]>([])
   const selectedLane = ref<Lane | null>(null)
 
   function setViewer(v: Viewer) {
     viewer.value = v
   }
-
-  // function setRoads(r: Road[]) {
-  //   roads.value = r
-  // }
 
   function setSelectedLane(l: Lane | null) {
     selectedLane.value = l
@@ -32,7 +27,6 @@ export const useAppStore = defineStore('app', () => {
 
   function clear() {
     viewer.value?.clear()
-    // roads.value = []
     selectedLane.value = null
     openDrive.value = null
     openDriveContent.value = null
