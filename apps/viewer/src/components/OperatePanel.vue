@@ -35,6 +35,32 @@ watch(precision, () => {
   viewer.value.setOpenDrive(openDrive)
 })
 
+watch(viewer, (v) => {
+  if (v && !openDriveContent.value)
+    loadDefaultMap()
+})
+
+async function loadDefaultMap() {
+  loading.value = true
+  try {
+    const res = await fetch('/data/Town04_Opt.xodr')
+    const content = await res.text()
+    if (content && viewer.value) {
+      store.setOpenDriveContent(content)
+      const openDrive = parseOpenDrive(content, precision.value)
+      store.setOpenDrive(openDrive)
+      viewer.value.setOpenDrive(openDrive)
+      viewer.value.vm.fitToCamera()
+      message.success('Loaded default map')
+    }
+  }
+  catch (error) {
+    message.error('Failed to load default map')
+    console.error(error)
+  }
+  loading.value = false
+}
+
 function parseOpenDrive(content: string, precision: number) {
   const openDrive = new OpenDrive(content, precision)
   openDrive.process()
