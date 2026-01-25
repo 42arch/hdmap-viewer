@@ -31,25 +31,34 @@ export default class PlanView implements IPlanView {
     }
   }
 
-  sample(elevationProfile: IElevationProfile, step: number): ReferencePoint[] {
+  sample(elevationProfile: IElevationProfile, step: number, extraS: number[] = []): ReferencePoint[] {
     const referencePoints: ReferencePoint[] = []
-    let sStartRoad = 0
+    
     for (let i = 0; i < this.geometries.length; i++) {
       const geometry = this.geometries[i]
-      const geometryLength = geometry.length
-      const points = geometry.sample(elevationProfile, step)
+      const sStartRoad = geometry.s
+      const sEndRoad = sStartRoad + geometry.length
+
+      // Filter and map extraS to local S coordinates for this geometry
+      const localExtraS = extraS
+        .filter(s => s >= sStartRoad && s <= sEndRoad)
+        .map(s => s - sStartRoad)
+
+      const points = geometry.sample(elevationProfile, step, localExtraS)
+      
       points.forEach((p) => {
         const roadS = p.s + sStartRoad
         p.setSOfRoad(roadS)
       })
+
       if (i !== 0) {
+        // Filter out the first point (local s=0) to avoid duplicates with the previous segment's end
         const noZeroSPoints = points.filter(p => p.s !== 0)
         referencePoints.push(...noZeroSPoints)
       }
       else {
         referencePoints.push(...points)
       }
-      sStartRoad += geometryLength
     }
 
     return referencePoints
