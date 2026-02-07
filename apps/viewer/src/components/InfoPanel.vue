@@ -32,7 +32,7 @@ interface InfoState {
 }
 
 const store = useAppStore()
-const { viewer, openDrive } = storeToRefs(store)
+const { viewer, openDrive, fileInfo } = storeToRefs(store)
 const state = reactive<InfoState>({
   basic: null,
   coordinate: null,
@@ -87,7 +87,7 @@ watch(viewer, () => {
       <NIcon size="12">
         <InfoCircle />
       </NIcon>
-      <span>Info</span>
+      <span>{{ fileInfo?.name }}</span>
     </div>
 
     <NDivider />

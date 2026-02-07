@@ -4,6 +4,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 export const useAppStore = defineStore('app', () => {
+  const fileInfo = ref<{ name: string, size: number } | null>(null)
   const openDriveContent = ref<string | null>(null)
   const openDrive = ref<OpenDrive | null>(null)
   const viewer = ref<Viewer | null>(null)
@@ -11,6 +12,10 @@ export const useAppStore = defineStore('app', () => {
 
   function setViewer(v: Viewer) {
     viewer.value = v
+  }
+
+  function setFileInfo(info: { name: string, size: number }) {
+    fileInfo.value = info
   }
 
   function setSelectedLane(l: Lane | null) {
@@ -30,7 +35,8 @@ export const useAppStore = defineStore('app', () => {
     selectedLane.value = null
     openDrive.value = null
     openDriveContent.value = null
+    fileInfo.value = null
   }
 
-  return { openDriveContent, setOpenDriveContent, viewer, setViewer, selectedLane, setSelectedLane, openDrive, setOpenDrive, clear }
+  return { fileInfo, setFileInfo, openDriveContent, setOpenDriveContent, viewer, setViewer, selectedLane, setSelectedLane, openDrive, setOpenDrive, clear }
 })

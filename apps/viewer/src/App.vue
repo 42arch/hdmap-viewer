@@ -27,6 +27,18 @@ const themeOverrides: GlobalThemeOverrides = {
   Checkbox: {
     fontSizeSmall: '12px',
   },
+  Dropdown: {
+    fontSizeMedium: '12px',
+    fontSizeSmall: '12px',
+    padding: '0px',
+    optionHeightSmall: '20px',
+    optionPrefixWidthSmall: '4px',
+    optionSuffixWidthSmall: '4px',
+    optionIconSizeSmall: '0px',
+    optionIconSuffixWidthSmall: '0px',
+    optionIconPrefixWidthSmall: '0px',
+
+  },
 }
 </script>
 

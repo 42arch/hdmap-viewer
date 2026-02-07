@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import type { TreeOption, UploadFileInfo } from 'naive-ui'
 import type { Level } from '@/libs/types'
-import { CaretRight } from '@vicons/fa'
-import { NButton, NCard, NCheckbox, NCollapse, NCollapseItem, NGrid, NGridItem, NIcon, NScrollbar, NSelect, NTree, NUpload, useMessage } from 'naive-ui'
+import { CaretRight, EllipsisH } from '@vicons/fa'
+import { NButton, NCard, NCheckbox, NCollapse, NCollapseItem, NDropdown, NGrid, NGridItem, NIcon, NScrollbar, NSelect, NTree, NUpload, useMessage } from 'naive-ui'
 import OpenDrive from 'opendrive-parser'
 import { storeToRefs } from 'pinia'
-import { computed, ref, watch } from 'vue'
+import { computed, h, ref, watch } from 'vue'
 import { useAppStore } from '@/store'
 import AppTitle from './AppTitle.vue'
 
@@ -24,6 +24,26 @@ const precisionOptions = [{
   label: 'Low (1)',
   value: 1,
 }]
+
+const dropdownOptions = [
+  {
+    label: 'Zoom to',
+    key: 'zoom-to',
+  },
+  {
+    label: 'Toogle',
+    key: 'toogle',
+  },
+]
+
+function handleSelect(key: string | number, option: TreeOption) {
+  if (key === 'zoom-to') {
+    viewer.value?.zoomTo(option.level as Level, option.key as string)
+  }
+  // if (key === 'toogle') {
+  //   viewer.value?.toggle(option.level as Level, option.key as string)
+  // }
+}
 
 watch(precision, () => {
   if (!viewer.value)
@@ -46,6 +66,10 @@ async function loadDefaultMap() {
     const res = await fetch('/data/Town04_Opt.xodr')
     const content = await res.text()
     if (content && viewer.value) {
+      store.setFileInfo({
+        name: 'Town04_Opt.xodr',
+        size: 0,
+      })
       store.setOpenDriveContent(content)
       const openDrive = parseOpenDrive(content, precision.value)
       store.setOpenDrive(openDrive)
@@ -71,12 +95,17 @@ function handleChange({ file }: { file: UploadFileInfo }) {
   loading.value = true
   const t1 = performance.now()
   const reader = new FileReader()
+
+  store.clear()
+  store.setFileInfo({
+    name: file.name,
+    size: file.file?.size || 0,
+  })
   reader.onload = (event) => {
     if (!viewer.value)
       return
     const content = event.target?.result as string
     if (content) {
-      store.clear()
       store.setOpenDriveContent(content)
       const openDrive = parseOpenDrive(content, precision.value)
       store.setOpenDrive(openDrive)
@@ -104,6 +133,34 @@ function nodeProps({ option }: { option: TreeOption }) {
       viewer.value?.hm.clear('panel')
     },
   }
+}
+
+function renderSuffix({ option }: { option: TreeOption }) {
+  return h(
+    NDropdown,
+    {
+      trigger: 'click',
+      size: 'small',
+      placement: 'left-start',
+      options: dropdownOptions,
+      onSelect: (key: string | number) => handleSelect(key, option),
+    },
+    {
+      default: () => h(
+        NButton,
+        {
+          text: true,
+          style: 'margin-left: 4px; display: flex; align-items: center;',
+          onClick: (e: MouseEvent) => {
+            e.stopPropagation()
+          },
+        },
+        {
+          default: () => h(NIcon, { size: 12 }, { default: () => h(EllipsisH) }),
+        },
+      ),
+    },
+  )
 }
 
 const roadNetworkData = computed(() => {
@@ -192,7 +249,8 @@ function handlePerfMonitor(v: boolean) {
         <NScrollbar style="max-height: 320px;">
           <NTree
             block-line :data="roadNetworkData" :indent="14" :show-line="true"
-            :node-props="nodeProps"
+            expand-on-click :selectable="false"
+            :node-props="nodeProps" :render-suffix="renderSuffix"
           />
         </NScrollbar>
       </NCollapseItem>

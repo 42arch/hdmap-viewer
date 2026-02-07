@@ -26,3 +26,12 @@ body {
 .n-divider:not(.n-divider--vertical) {
   margin: 8px 0px;
 }
+
+.n-dropdown-menu .n-dropdown-option .n-dropdown-option-body .n-dropdown-option-body__suffix {
+  display: none !important;
+  padding: 0 !important;
+}
+
+.n-dropdown-menu .n-dropdown-option .n-dropdown-option-body .n-dropdown-option-body__prefix {
+  display: none !important;
+}

@@ -1,6 +1,7 @@
 import type { Lane, OpenDrive, ReferenceLine, Road } from 'opendrive-parser'
 import type { Material } from 'three'
-import { BufferAttribute, BufferGeometry, DoubleSide, Float32BufferAttribute, Group, LineBasicMaterial, LineSegments, Mesh, MeshBasicMaterial, NormalBlending, PerspectiveCamera, Raycaster, Scene, Vector2, Vector3, WebGLRenderer } from 'three'
+import type { Level } from './types'
+import { Box3, BufferAttribute, BufferGeometry, DoubleSide, Float32BufferAttribute, Group, LineBasicMaterial, LineSegments, Mesh, MeshBasicMaterial, NormalBlending, PerspectiveCamera, Raycaster, Scene, Vector2, Vector3, WebGLRenderer } from 'three'
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-mesh-bvh'
 import { BufferGeometryUtils, OrbitControls } from 'three/examples/jsm/Addons.js'
 import HighlightManager from './highlight-manager'
@@ -162,6 +163,83 @@ class Viewer {
     this.openDrive = openDrive
     this.addReferenceLines(openDrive.getReferenceLines())
     this.addRoads(openDrive.getRoads())
+  }
+
+  public getLaneFromId(laneId: string): Lane | undefined {
+    const parts = laneId.split('_')
+    if (parts.length < 3)
+      return undefined
+
+    const lId = parts.pop()!
+    const sS = parts.pop()!
+    const rId = parts.join('_')
+
+    const road = this.openDrive?.getRoadById(rId)
+    if (!road)
+      return undefined
+
+    const section = road.getLaneSectionByS(Number(sS))
+    if (!section)
+      return undefined
+
+    return section.getLaneById(lId)
+  }
+
+  public getElementBox(level: Level, key: string): Box3 {
+    const box = new Box3()
+    if (!this.openDrive)
+      return box
+
+    if (level === 'lane') {
+      const lane = this.getLaneFromId(key)
+      if (lane) {
+        const geom = this.createLaneGeometry(lane)
+        if (geom) {
+          geom.computeBoundingBox()
+          box.union(geom.boundingBox!)
+          geom.dispose()
+        }
+      }
+    }
+    else if (level === 'section') {
+      const parts = key.split('_')
+      const sS = parts.pop()
+      const rId = parts.join('_')
+      const road = this.openDrive.getRoadById(rId)
+      const section = road?.getLaneSectionByS(Number(sS))
+      if (section) {
+        for (const lane of section.getLanes()) {
+          const geom = this.createLaneGeometry(lane)
+          if (geom) {
+            geom.computeBoundingBox()
+            box.union(geom.boundingBox!)
+            geom.dispose()
+          }
+        }
+      }
+    }
+    else if (level === 'road') {
+      const road = this.openDrive.getRoadById(key)
+      if (road) {
+        for (const section of road.getLaneSections()) {
+          for (const lane of section.getLanes()) {
+            const geom = this.createLaneGeometry(lane)
+            if (geom) {
+              geom.computeBoundingBox()
+              box.union(geom.boundingBox!)
+              geom.dispose()
+            }
+          }
+        }
+      }
+    }
+
+    return box
+  }
+
+  public zoomTo(level: Level, key: string) {
+    const box = this.getElementBox(level, key)
+    this.vm.fitToBox(box)
   }
 
   addReferenceLines(referenceLines: ReferenceLine[]): void {
