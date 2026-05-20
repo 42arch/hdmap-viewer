@@ -32,7 +32,7 @@ interface InfoState {
 }
 
 const store = useAppStore()
-const { viewer, openDrive } = storeToRefs(store)
+const { viewer, openDrive, fileInfo } = storeToRefs(store)
 const state = reactive<InfoState>({
   basic: null,
   coordinate: null,
@@ -82,15 +82,15 @@ watch(viewer, () => {
 </script>
 
 <template>
-  <NCard class="info-panel" content-style="padding: 0">
+  <NCard :class="['info-panel', { 'has-content': !!state.basic }]" content-style="padding: 0">
     <div class="title">
       <NIcon size="12">
         <InfoCircle />
       </NIcon>
-      <span>Info</span>
+      <span>{{ fileInfo?.name }}</span>
     </div>
 
-    <NDivider />
+    <NDivider v-show="state.basic" />
 
     <div v-show="state.basic">
       <div v-if="state.coordinate" class="coord-list">
@@ -139,7 +139,7 @@ watch(viewer, () => {
 
       <div v-if="state.successors.length" class="link-container">
         <p>
-          <NIcon size="14">
+          <NIcon size="14" class="successor-icon">
             <LongArrowAltRight />
           </NIcon>
           <span>Successors</span>
@@ -169,7 +169,7 @@ watch(viewer, () => {
       </div>
       <div v-if="state.predecessors.length" class="link-container">
         <p>
-          <NIcon size="14">
+          <NIcon size="14" class="predecessor-icon">
             <LongArrowAltLeft />
           </NIcon>
           <span>Predecessors</span>
@@ -208,12 +208,23 @@ watch(viewer, () => {
   left: 10px;
   width: 240px;
   height: auto;
-  min-height: 120px;
   border-width: 1px;
   border-style: solid;
   padding: 8px;
   z-index: 9;
   pointer-events: unset;
+}
+
+.info-panel.has-content {
+  min-height: 120px;
+}
+
+.successor-icon {
+  color: #09da2f;
+}
+
+.predecessor-icon {
+  color: #EDCC0D;
 }
 
 .title {

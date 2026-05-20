@@ -1,6 +1,7 @@
 import type { Lane, OpenDrive, ReferenceLine, Road } from 'opendrive-parser'
 import type { Material } from 'three'
-import { BufferAttribute, BufferGeometry, DoubleSide, Float32BufferAttribute, Group, LineBasicMaterial, LineSegments, Mesh, MeshBasicMaterial, NormalBlending, PerspectiveCamera, Raycaster, Scene, Vector2, Vector3, WebGLRenderer } from 'three'
+import type { Level } from './types'
+import { Box3, BufferAttribute, BufferGeometry, DoubleSide, Float32BufferAttribute, Group, LineBasicMaterial, LineSegments, Mesh, MeshBasicMaterial, NormalBlending, PerspectiveCamera, Raycaster, Scene, Vector2, Vector3, WebGLRenderer } from 'three'
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-mesh-bvh'
 import { BufferGeometryUtils, OrbitControls } from 'three/examples/jsm/Addons.js'
 import HighlightManager from './highlight-manager'
@@ -37,6 +38,7 @@ class Viewer {
   public vm: ViewManager
 
   private laneIdMap: string[] = []
+  private visibleLanesSet: Set<string> = new Set()
 
   constructor(dom: HTMLDivElement) {
     this.dom = dom
@@ -121,7 +123,10 @@ class Viewer {
     window.requestAnimationFrame(this.animate.bind(this))
     this.vm.end()
 
-    if (!this.isMouseOverCanvas) {
+    if (!this.isMouseOverCanvas || !this.vm.hoverHighlight) {
+      if (!this.vm.hoverHighlight) {
+        this.hm.clear('canvas')
+      }
       return
     }
 
@@ -142,8 +147,12 @@ class Viewer {
           const idIndex = laneIndexAttr.getX(a)
           const laneName = this.laneIdMap[idIndex]
           if (laneName) {
-            this.hm.setHighlight('lane', laneName, 'canvas', intersection.point)
-            return
+            const laneVisibleAttr = object.geometry.getAttribute('laneVisible')
+            const isVisible = laneVisibleAttr ? laneVisibleAttr.getX(a) > 0.5 : true
+            if (isVisible) {
+              this.hm.setHighlight('lane', laneName, 'canvas', intersection.point)
+              return
+            }
           }
         }
       }
@@ -162,6 +171,83 @@ class Viewer {
     this.openDrive = openDrive
     this.addReferenceLines(openDrive.getReferenceLines())
     this.addRoads(openDrive.getRoads())
+  }
+
+  public getLaneFromId(laneId: string): Lane | undefined {
+    const parts = laneId.split('_')
+    if (parts.length < 3)
+      return undefined
+
+    const lId = parts.pop()!
+    const sS = parts.pop()!
+    const rId = parts.join('_')
+
+    const road = this.openDrive?.getRoadById(rId)
+    if (!road)
+      return undefined
+
+    const section = road.getLaneSectionByS(Number(sS))
+    if (!section)
+      return undefined
+
+    return section.getLaneById(lId)
+  }
+
+  public getElementBox(level: Level, key: string): Box3 {
+    const box = new Box3()
+    if (!this.openDrive)
+      return box
+
+    if (level === 'lane') {
+      const lane = this.getLaneFromId(key)
+      if (lane) {
+        const geom = this.createLaneGeometry(lane)
+        if (geom) {
+          geom.computeBoundingBox()
+          box.union(geom.boundingBox!)
+          geom.dispose()
+        }
+      }
+    }
+    else if (level === 'section') {
+      const parts = key.split('_')
+      const sS = parts.pop()
+      const rId = parts.join('_')
+      const road = this.openDrive.getRoadById(rId)
+      const section = road?.getLaneSectionByS(Number(sS))
+      if (section) {
+        for (const lane of section.getLanes()) {
+          const geom = this.createLaneGeometry(lane)
+          if (geom) {
+            geom.computeBoundingBox()
+            box.union(geom.boundingBox!)
+            geom.dispose()
+          }
+        }
+      }
+    }
+    else if (level === 'road') {
+      const road = this.openDrive.getRoadById(key)
+      if (road) {
+        for (const section of road.getLaneSections()) {
+          for (const lane of section.getLanes()) {
+            const geom = this.createLaneGeometry(lane)
+            if (geom) {
+              geom.computeBoundingBox()
+              box.union(geom.boundingBox!)
+              geom.dispose()
+            }
+          }
+        }
+      }
+    }
+
+    return box
+  }
+
+  public zoomTo(level: Level, key: string) {
+    const box = this.getElementBox(level, key)
+    this.vm.fitToBox(box)
   }
 
   addReferenceLines(referenceLines: ReferenceLine[]): void {
@@ -204,32 +290,58 @@ class Viewer {
       blending: NormalBlending,
     })
 
+    const customizeMaterial = (material: any) => {
+      material.onBeforeCompile = (shader: any) => {
+        shader.vertexShader = shader.vertexShader.replace(
+          'void main() {',
+          `attribute float laneVisible;
+           varying float vLaneVisible;
+           void main() {
+             vLaneVisible = laneVisible;`
+        )
+        shader.fragmentShader = shader.fragmentShader.replace(
+          'void main() {',
+          `varying float vLaneVisible;
+           void main() {
+             if (vLaneVisible < 0.5) discard;`
+        )
+      }
+    }
+
+    customizeMaterial(laneAreaMaterial)
+    customizeMaterial(laneBoundaryMaterial)
+
     const laneGeometries: BufferGeometry[] = []
     const laneBoundaryGeometries: BufferGeometry[] = []
     this.laneIdMap = [] // Reset map
+    this.visibleLanesSet.clear()
 
     for (const road of roads) {
       const laneSections = road.getLaneSections()
       for (const section of laneSections) {
         const lanes = section.getLanes()
         for (const lane of lanes) {
+          const laneId = `${road.id}_${section.s}_${lane.id}`
+          this.laneIdMap.push(laneId)
+          this.visibleLanesSet.add(laneId) // Default all visible
+          const index = this.laneIdMap.length - 1
+
           // Lane Area
           const geometry = this.createLaneGeometry(lane)
           if (geometry) {
-            const laneId = `${road.id}_${section.s}_${lane.id}`
-            this.laneIdMap.push(laneId)
-            const index = this.laneIdMap.length - 1
-
-            // Add custom attribute to store index
+            // Add custom attributes to store index and visibility
             const count = geometry.getAttribute('position').count
             const indexArray = new Float32Array(count).fill(index)
             geometry.setAttribute('laneIndex', new BufferAttribute(indexArray, 1))
+
+            const visibleArray = new Float32Array(count).fill(1.0)
+            geometry.setAttribute('laneVisible', new BufferAttribute(visibleArray, 1))
 
             laneGeometries.push(geometry)
           }
 
           // Lane Boundary
-          const boundaryGeom = this.createLaneBoundaryGeometry(lane)
+          const boundaryGeom = this.createLaneBoundaryGeometry(lane, index)
           if (boundaryGeom) {
             laneBoundaryGeometries.push(boundaryGeom)
           }
@@ -275,7 +387,7 @@ class Viewer {
     return geometry
   }
 
-  createLaneBoundaryGeometry(lane: Lane): BufferGeometry | null {
+  createLaneBoundaryGeometry(lane: Lane, index: number): BufferGeometry | null {
     const boundaryLine = lane.getBoundaryLine()
     if (boundaryLine.length < 2) {
       return null
@@ -293,6 +405,15 @@ class Viewer {
       return null
 
     const geometry = new BufferGeometry().setFromPoints(segments)
+
+    // Add custom attributes to store index and visibility
+    const count = geometry.getAttribute('position').count
+    const indexArray = new Float32Array(count).fill(index)
+    geometry.setAttribute('laneIndex', new BufferAttribute(indexArray, 1))
+
+    const visibleArray = new Float32Array(count).fill(1.0)
+    geometry.setAttribute('laneVisible', new BufferAttribute(visibleArray, 1))
+
     return geometry
   }
 
@@ -318,6 +439,61 @@ class Viewer {
     this.disposeGroup(this.referenceLineGroup)
     this.scene.remove(this.roadGroup, this.roadmarkGroup, this.referenceLineGroup)
     this.vm.clear()
+    this.visibleLanesSet.clear()
+  }
+
+  public isLaneVisible(laneId: string): boolean {
+    return this.visibleLanesSet.size === 0 || this.visibleLanesSet.has(laneId)
+  }
+
+  public updateVisibility(visibilityMap: Record<string, boolean>) {
+    if (this.laneIdMap.length === 0)
+      return
+
+    this.visibleLanesSet.clear()
+
+    // Precompute flat visibility states corresponding to laneIdMap
+    const laneVisibleStates = new Float32Array(this.laneIdMap.length)
+    for (let i = 0; i < this.laneIdMap.length; i++) {
+      const laneKey = this.laneIdMap[i]!
+      const parts = laneKey.split('_')
+
+      parts.pop()
+      const sectionS = parts.pop()!
+      const roadId = parts.join('_')
+      const sectionKey = `${roadId}_${sectionS}`
+
+      const roadVisible = visibilityMap[roadId] !== false
+      const sectionVisible = visibilityMap[sectionKey] !== false
+      const laneVisible = visibilityMap[laneKey] !== false
+
+      const isVisible = (roadVisible && sectionVisible && laneVisible)
+      if (isVisible) {
+        this.visibleLanesSet.add(laneKey)
+      }
+      laneVisibleStates[i] = isVisible ? 1.0 : 0.0
+    }
+
+    const updateMeshVisibility = (group: Group) => {
+      group.traverse((obj: any) => {
+        if (obj.isMesh || obj.isLineSegments) {
+          const geom = obj.geometry
+          const laneIndexAttr = geom.getAttribute('laneIndex')
+          const laneVisibleAttr = geom.getAttribute('laneVisible')
+          if (laneIndexAttr && laneVisibleAttr) {
+            const laneIndices = laneIndexAttr.array
+            const laneVisibles = laneVisibleAttr.array
+            for (let i = 0; i < laneIndices.length; i++) {
+              laneVisibles[i] = laneVisibleStates[laneIndices[i]!]!
+            }
+            laneVisibleAttr.needsUpdate = true
+          }
+        }
+      })
+    }
+
+    updateMeshVisibility(this.roadGroup)
+    updateMeshVisibility(this.roadmarkGroup)
   }
 }
 

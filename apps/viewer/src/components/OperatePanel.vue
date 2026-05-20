@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import type { TreeOption, UploadFileInfo } from 'naive-ui'
 import type { Level } from '@/libs/types'
-import { CaretRight } from '@vicons/fa'
-import { NButton, NCard, NCheckbox, NCollapse, NCollapseItem, NGrid, NGridItem, NIcon, NScrollbar, NSelect, NTree, NUpload, useMessage } from 'naive-ui'
+import { CaretRight, Crosshairs, Eye, EyeSlash } from '@vicons/fa'
+import { NButton, NCard, NCheckbox, NCollapse, NCollapseItem, NGrid, NGridItem, NIcon, NSelect, NTree, NUpload, useMessage } from 'naive-ui'
 import OpenDrive from 'opendrive-parser'
 import { storeToRefs } from 'pinia'
-import { computed, ref, watch } from 'vue'
+import { computed, h, ref, watch } from 'vue'
 import { useAppStore } from '@/store'
 import AppTitle from './AppTitle.vue'
 
@@ -25,6 +25,8 @@ const precisionOptions = [{
   value: 1,
 }]
 
+
+
 watch(precision, () => {
   if (!viewer.value)
     return
@@ -33,6 +35,7 @@ watch(precision, () => {
   const openDrive = parseOpenDrive(openDriveContent.value!, precision.value)
   store.setOpenDrive(openDrive)
   viewer.value.setOpenDrive(openDrive)
+  viewer.value.vm.fitToCamera()
 })
 
 watch(viewer, (v) => {
@@ -46,6 +49,10 @@ async function loadDefaultMap() {
     const res = await fetch('/data/Town04_Opt.xodr')
     const content = await res.text()
     if (content && viewer.value) {
+      store.setFileInfo({
+        name: 'Town04_Opt.xodr',
+        size: 0,
+      })
       store.setOpenDriveContent(content)
       const openDrive = parseOpenDrive(content, precision.value)
       store.setOpenDrive(openDrive)
@@ -71,12 +78,17 @@ function handleChange({ file }: { file: UploadFileInfo }) {
   loading.value = true
   const t1 = performance.now()
   const reader = new FileReader()
+
+  store.clear()
+  store.setFileInfo({
+    name: file.name,
+    size: file.file?.size || 0,
+  })
   reader.onload = (event) => {
     if (!viewer.value)
       return
     const content = event.target?.result as string
     if (content) {
-      store.clear()
       store.setOpenDriveContent(content)
       const openDrive = parseOpenDrive(content, precision.value)
       store.setOpenDrive(openDrive)
@@ -92,23 +104,83 @@ function handleChange({ file }: { file: UploadFileInfo }) {
   reader.readAsText(file.file as Blob)
 }
 
+let highlightTimer: any = null
+
 function nodeProps({ option }: { option: TreeOption }) {
+  const isVisible = store.isElementVisible(option.key as string)
   return {
+    style: isVisible ? '' : 'opacity: 0.4;',
     onClick() {
       // viewer.value?.setSelectedLane(option.key as string)
     },
     onMouseover() {
-      viewer.value?.hm.setHighlight(option.level as Level, option.key as string, 'panel')
+      if (!isVisible) return
+      if (highlightTimer)
+        clearTimeout(highlightTimer)
+      highlightTimer = setTimeout(() => {
+        viewer.value?.hm.setHighlight(option.level as Level, option.key as string, 'panel')
+      }, 50)
     },
     onMouseout() {
+      if (highlightTimer)
+        clearTimeout(highlightTimer)
       viewer.value?.hm.clear('panel')
     },
   }
 }
 
+function renderSuffix({ option }: { option: TreeOption }) {
+  const isVisible = store.isElementVisible(option.key as string)
+
+  return h(
+    'div',
+    {
+      class: 'action-buttons',
+    },
+    [
+      h(
+        NButton,
+        {
+          text: true,
+          size: 'tiny',
+          style: 'padding: 2px;',
+          title: 'Zoom to element',
+          onClick: (e: MouseEvent) => {
+            e.stopPropagation()
+            viewer.value?.zoomTo(option.level as Level, option.key as string)
+          },
+        },
+        {
+          default: () => h(NIcon, { size: 12 }, { default: () => h(Crosshairs) }),
+        }
+      ),
+      h(
+        NButton,
+        {
+          text: true,
+          size: 'tiny',
+          style: 'padding: 2px; margin-left: 4px;',
+          title: isVisible ? 'Hide element' : 'Show element',
+          onClick: (e: MouseEvent) => {
+            e.stopPropagation()
+            store.toggleVisibility(option.key as string)
+          },
+        },
+        {
+          default: () => h(NIcon, { size: 12 }, { default: () => h(isVisible ? Eye : EyeSlash) }),
+        }
+      ),
+    ]
+  )
+}
+
 const roadNetworkData = computed(() => {
   if (!openDrive.value)
     return []
+
+  // Track visibilityMap for reactivity
+  void store.visibilityMap
+
   return openDrive.value.getRoads().map((road) => {
     return {
       label: road.name || road.id,
@@ -155,6 +227,18 @@ function handleHelper(v: boolean) {
 function handlePerfMonitor(v: boolean) {
   viewer.value?.vm.togglePerfMonitor(v)
 }
+
+function handleHoverHighlight(v: boolean) {
+  viewer.value?.vm.toggleHoverHighlight(v)
+}
+
+function handleZoomAll() {
+  viewer.value?.vm.fitToCamera()
+}
+
+function handleToggleAll() {
+  store.toggleAllVisibility()
+}
 </script>
 
 <template>
@@ -181,7 +265,10 @@ function handlePerfMonitor(v: boolean) {
             <NCheckbox size="small" label="Reference Lines" :default-checked="true" @update:checked="handleReferenceLine" />
           </NGridItem>
           <NGridItem>
-            <NCheckbox size="small" label="Grid Helper" :default-checked="true" @update:checked="handleHelper" />
+            <NCheckbox size="small" label="Grid" :default-checked="true" @update:checked="handleHelper" />
+          </NGridItem>
+          <NGridItem>
+            <NCheckbox size="small" label="Hover Highlight" :default-checked="true" @update:checked="handleHoverHighlight" />
           </NGridItem>
           <NGridItem>
             <NCheckbox size="small" label="Performance Monitor" :default-checked="false" @update:checked="handlePerfMonitor" />
@@ -189,12 +276,38 @@ function handlePerfMonitor(v: boolean) {
         </NGrid>
       </NCollapseItem>
       <NCollapseItem title="Road Network" name="3">
-        <NScrollbar style="max-height: 320px;">
-          <NTree
-            block-line :data="roadNetworkData" :indent="14" :show-line="true"
-            :node-props="nodeProps"
-          />
-        </NScrollbar>
+        <template #header-extra>
+          <div class="global-actions" @click.stop>
+            <NButton
+              text
+              size="tiny"
+              title="Zoom to fit map"
+              style="padding: 2px;"
+              @click="handleZoomAll"
+            >
+              <NIcon :size="12">
+                <Crosshairs />
+              </NIcon>
+            </NButton>
+            <NButton
+              text
+              size="tiny"
+              :title="store.areAllVisible() ? 'Hide all roads' : 'Show all roads'"
+              style="padding: 2px; margin-left: 4px;"
+              @click="handleToggleAll"
+            >
+              <NIcon :size="12">
+                <component :is="store.areAllVisible() ? Eye : EyeSlash" />
+              </NIcon>
+            </NButton>
+          </div>
+        </template>
+        <NTree
+          block-line :data="roadNetworkData" :indent="14" :show-line="true"
+          expand-on-click :selectable="false" virtual-scroll
+          style="max-height: 320px;"
+          :node-props="nodeProps" :render-suffix="renderSuffix"
+        />
       </NCollapseItem>
     </NCollapse>
 
@@ -218,6 +331,7 @@ function handlePerfMonitor(v: boolean) {
   border-style: solid;
   padding: 8px;
   z-index: 9;
+  user-select: none;
 }
 
 .upload {
@@ -230,5 +344,45 @@ function handlePerfMonitor(v: boolean) {
 
 .upload-btn {
   width: 220px;
+}
+
+:deep(.n-tree-node) {
+  position: relative;
+}
+
+:deep(.action-buttons) {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+
+:deep(.n-tree-node:hover) .action-buttons {
+  opacity: 1;
+  visibility: visible;
+}
+
+:deep(.action-buttons .n-button) {
+  color: var(--n-text-color) !important;
+}
+
+:deep(.action-buttons .n-button:hover) {
+  color: var(--n-primary-color-hover) !important;
+}
+
+.global-actions {
+  display: flex;
+  align-items: center;
+  margin-right: 8px;
+}
+
+.global-actions .n-button {
+  color: var(--n-text-color);
+}
+
+.global-actions .n-button:hover {
+  color: var(--n-primary-color-hover);
 }
 </style>

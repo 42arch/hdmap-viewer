@@ -74,7 +74,7 @@ class HighlightManager {
   }
 
   setHighlightLane(laneId: string | null) {
-    if (!laneId) {
+    if (!laneId || !this.viewer.isLaneVisible(laneId)) {
       this.clearHighlightLane()
       return
     }
@@ -129,6 +129,8 @@ class HighlightManager {
     
     for (const section of laneSections) {
         for (const lane of section.getLanes()) {
+            const laneId = `${roadId}_${section.s}_${lane.id}`
+            if (!this.viewer.isLaneVisible(laneId)) continue
             const geom = this.viewer.createLaneGeometry(lane)
             if (geom) laneGeometries.push(geom)
         }
@@ -181,6 +183,8 @@ class HighlightManager {
     const lanes = laneSection.getLanes()
 
     for (const lane of lanes) {
+      const laneId = `${roadId}_${sectionS}_${lane.id}`
+      if (!this.viewer.isLaneVisible(laneId)) continue
       const geom = this.viewer.createLaneGeometry(lane)
       if (geom) laneGeometries.push(geom)
     }
@@ -201,10 +205,11 @@ class HighlightManager {
   }
 
   setHighlightPredecessors(laneIds: string[]) {
-    if (laneIds.length === 0)
+    const visibleLaneIds = laneIds.filter(id => this.viewer.isLaneVisible(id))
+    if (visibleLaneIds.length === 0)
       return
     const geometries = []
-    for (const laneId of laneIds) {
+    for (const laneId of visibleLaneIds) {
       const lane = this.getLaneFromId(laneId)
       if (lane) {
           const geom = this.viewer.createLaneGeometry(lane)
@@ -237,10 +242,11 @@ class HighlightManager {
   }
 
   setHighlightSuccessors(laneIds: string[]) {
-    if (laneIds.length === 0)
+    const visibleLaneIds = laneIds.filter(id => this.viewer.isLaneVisible(id))
+    if (visibleLaneIds.length === 0)
       return
     const geometries = []
-    for (const laneId of laneIds) {
+    for (const laneId of visibleLaneIds) {
       const lane = this.getLaneFromId(laneId)
       if (lane) {
           const geom = this.viewer.createLaneGeometry(lane)

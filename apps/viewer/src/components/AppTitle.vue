@@ -3,6 +3,11 @@ import { Github } from '@vicons/fa'
 import { NDivider, NIcon } from 'naive-ui'
 
 const version = import.meta.env.VITE_APP_VERSION
+const repoUrl = import.meta.env.VITE_APP_REPO_URL
+
+function openGithub() {
+  window.open(repoUrl, '_blank')
+}
 </script>
 
 <template>
@@ -11,7 +16,7 @@ const version = import.meta.env.VITE_APP_VERSION
       <span class="name">HDMap Viewer</span>
       <span class="version">v{{ version }}</span>
     </h1>
-    <NIcon size="14" class="github">
+    <NIcon size="14" class="github" @click="openGithub">
       <Github />
     </NIcon>
   </div>

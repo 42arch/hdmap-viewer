@@ -6,6 +6,7 @@ class ViewManager {
   private viewer: Viewer
   private helperGroup: Group
   private pref: ThreePerf
+  public hoverHighlight: boolean = true
 
   constructor(viewer: Viewer) {
     this.viewer = viewer
@@ -36,6 +37,7 @@ class ViewManager {
   }
 
   addHelper(size: Vector3, center: Vector3): void {
+    this.helperGroup.clear()
     const cellSize = 10
     const baseSize = Math.max(size.x, size.z)
     const divisions = Math.ceil(baseSize / cellSize)
@@ -80,6 +82,13 @@ class ViewManager {
     this.pref.visible = visible
   }
 
+  toggleHoverHighlight(visible: boolean) {
+    this.hoverHighlight = visible
+    if (!visible) {
+      this.viewer.hm.clear('canvas')
+    }
+  }
+
   begin() {
     this.pref.begin()
   }
@@ -89,10 +98,21 @@ class ViewManager {
   }
 
   fitToCamera() {
+    const box = this.calculateBoundingBox()
+    this.fitToBox(box)
+
+    const size = box.getSize(new Vector3())
+    const center = box.getCenter(new Vector3())
+    this.addHelper(size, center)
+  }
+
+  fitToBox(box: Box3) {
+    if (box.isEmpty())
+      return
+
     const camera = this.viewer.camera
     const controls = this.viewer.controls
 
-    const box = this.calculateBoundingBox()
     const size = box.getSize(new Vector3())
     const center = box.getCenter(new Vector3())
     const offset = 1.2
@@ -101,13 +121,11 @@ class ViewManager {
     const fov = MathUtils.degToRad(camera.fov)
     const distance = (maxSize / 2) / Math.tan(fov / 2) * offset
 
-    const dir = new Vector3()
-      .subVectors(camera.position, controls?.target ?? center)
-      .normalize()
+    const currentPos = camera.position.clone()
+    const currentTarget = controls?.target.clone() ?? new Vector3()
+    const direction = currentPos.sub(currentTarget).normalize()
 
-    camera.position.copy(
-      dir.multiplyScalar(distance).add(center),
-    )
+    camera.position.copy(direction.multiplyScalar(distance).add(center))
 
     camera.near = distance / 100
     camera.far = distance * 100
@@ -117,8 +135,6 @@ class ViewManager {
       controls.target.copy(center)
       controls.update()
     }
-
-    this.addHelper(size, center)
   }
 
   clear() {

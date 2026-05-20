@@ -6,7 +6,7 @@ A monorepo for parsing and visualizing High-Definition (HD) Maps, primarily focu
 
 - **OpenDRIVE Viewer**: A web-based 3D viewer for `.xodr` files.
 - **OpenDRIVE Parser**: A TypeScript library to parse OpenDRIVE XML files into JavaScript objects.
-- **Apollo Map Parser**: (Work in Progress) A library for parsing Apollo HD Maps.
+
 
 ## Project Structure
 
@@ -71,28 +71,6 @@ To run linting across the codebase:
 ```bash
 pnpm lint
 ```
-
-### Cleaning
-
-To clean `node_modules` and build artifacts:
-
-```bash
-pnpm clean
-```
-
-## Tech Stack
-
-- **Monorepo**: [Turbo](https://turbo.build/), [pnpm workspaces](https://pnpm.io/workspaces), [Changesets](https://github.com/changesets/changesets)
-- **Viewer App**:
-  - [Vue 3](https://vuejs.org/)
-  - [Vite](https://vitejs.dev/)
-  - [Three.js](https://threejs.org/) (3D Rendering)
-  - [Naive UI](https://www.naiveui.com/) (Component Library)
-  - [Pinia](https://pinia.vuejs.org/) (State Management)
-- **Parsers**:
-  - TypeScript
-  - [tsup](https://tsup.egoist.dev/) (Bundler)
-  - [fast-xml-parser](https://github.com/NaturalIntelligence/fast-xml-parser)
 
 ## License
 

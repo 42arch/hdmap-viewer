@@ -15,17 +15,33 @@ const themeOverrides: GlobalThemeOverrides = {
     borderRadius: '0px',
     boxShadow1: 'none',
     boxShadow2: 'none',
+    cubicBezierEaseIn: 'none',
+    cubicBezierEaseOut: 'none',
+    cubicBezierEaseInOut: 'none',
   },
   Collapse: {
     titlePadding: '4px 0px',
     itemMargin: '4px 0px',
   },
   Tree: {
+
     nodeHeight: '24px',
     nodeWrapperPadding: '0px',
   },
   Checkbox: {
     fontSizeSmall: '12px',
+  },
+  Dropdown: {
+    fontSizeMedium: '12px',
+    fontSizeSmall: '12px',
+    padding: '0px',
+    optionHeightSmall: '20px',
+    optionPrefixWidthSmall: '4px',
+    optionSuffixWidthSmall: '4px',
+    optionIconSizeSmall: '0px',
+    optionIconSuffixWidthSmall: '0px',
+    optionIconPrefixWidthSmall: '0px',
+
   },
 }
 </script>

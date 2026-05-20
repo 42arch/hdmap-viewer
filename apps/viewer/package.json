@@ -2,6 +2,10 @@
   "name": "hdmap-viewer",
   "type": "module",
   "version": "0.0.5",
+  "repository": {
+    "type": "github",
+    "url": "https://github.com/42arch/hdmap-viewer"
+  },
   "private": true,
   "scripts": {
     "dev": "vite",

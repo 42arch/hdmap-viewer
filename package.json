@@ -3,6 +3,10 @@
   "private": true,
   "packageManager": "pnpm@10.7.1",
   "description": "The monorepo for hdmap parser and viewer",
+  "repository": {
+    "type": "github",
+    "url": "https://github.com/42arch/hdmap-viewer"
+  },
   "author": "Ren Dan",
   "license": "ISC",
   "keywords": [],
