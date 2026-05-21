@@ -1,5 +1,11 @@
 # opendrive-parser
 
+## 0.2.0
+
+### Minor Changes
+
+- fix position offset at connection points wh
+
 ## 0.1.2
 
 ### Patch Changes

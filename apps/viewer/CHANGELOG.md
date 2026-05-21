@@ -1,5 +1,18 @@
 # viewer
 
+## 0.1.0
+
+### Minor Changes
+
+- Load default map
+- Improve viewer's preformance by using bvh
+- Add support for dynamic element visibility and zoom
+
+### Patch Changes
+
+- Updated dependencies
+  - opendrive-parser@0.2.0
+
 ## 0.0.5
 
 ### Patch Changes
