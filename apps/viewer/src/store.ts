@@ -45,9 +45,9 @@ export const useAppStore = defineStore('app', () => {
     const roadId = parts.join('_')
     const sectionKey = `${roadId}_${sectionS}`
     return (
-      visibilityMap.value[roadId] !== false &&
-      visibilityMap.value[sectionKey] !== false &&
-      visibilityMap.value[key] !== false
+      visibilityMap.value[roadId] !== false
+      && visibilityMap.value[sectionKey] !== false
+      && visibilityMap.value[key] !== false
     )
   }
 
@@ -58,20 +58,23 @@ export const useAppStore = defineStore('app', () => {
   }
 
   function areAllVisible(): boolean {
-    if (!openDrive.value) return true
+    if (!openDrive.value)
+      return true
     const roads = openDrive.value.getRoads()
     return roads.every(road => visibilityMap.value[road.id] !== false)
   }
 
   function toggleAllVisibility() {
-    if (!openDrive.value) return
+    if (!openDrive.value)
+      return
     const roads = openDrive.value.getRoads()
     const allVisible = areAllVisible()
     if (allVisible) {
-      roads.forEach(road => {
+      roads.forEach((road) => {
         visibilityMap.value[road.id] = false
       })
-    } else {
+    }
+    else {
       visibilityMap.value = {}
     }
     viewer.value?.updateVisibility(visibilityMap.value)

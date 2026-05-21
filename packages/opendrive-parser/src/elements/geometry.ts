@@ -25,17 +25,18 @@ export class Line extends BaseGeometry implements ILine {
 
   sample(elevationsProfile: IElevationProfile, step: number, extraS: number[] = []): ReferencePoint[] {
     const referencePoints: ReferencePoint[] = []
-    
+
     // Construct sample points
     const sampleS = new Set<number>()
     const nums = Math.ceil(this.length / step)
     for (let i = 0; i <= nums; i++) {
       sampleS.add(Math.min(i * step, this.length))
     }
-    extraS.forEach(s => {
-        if (s >= 0 && s <= this.length) sampleS.add(s)
+    extraS.forEach((s) => {
+      if (s >= 0 && s <= this.length)
+        sampleS.add(s)
     })
-    
+
     const sortedS = Array.from(sampleS).sort((a, b) => a - b)
 
     for (const s of sortedS) {
@@ -61,14 +62,15 @@ export class Arc extends BaseGeometry implements IArc {
 
   sample(elevationsProfile: IElevationProfile, step: number, extraS: number[] = []) {
     const referencePoints: ReferencePoint[] = []
-    
+
     const sampleS = new Set<number>()
     const nums = Math.ceil(this.length / step)
     for (let i = 0; i <= nums; i++) {
       sampleS.add(Math.min(i * step, this.length))
     }
-    extraS.forEach(s => {
-        if (s >= 0 && s <= this.length) sampleS.add(s)
+    extraS.forEach((s) => {
+      if (s >= 0 && s <= this.length)
+        sampleS.add(s)
     })
     const sortedS = Array.from(sampleS).sort((a, b) => a - b)
 
@@ -76,7 +78,7 @@ export class Arc extends BaseGeometry implements IArc {
 
     for (const s of sortedS) {
       const z = elevationsProfile.getElevationByS(s + this.s)
-      
+
       let nx, ny, nHdg
 
       if (Math.abs(curvature) < 1e-9) {
@@ -84,11 +86,12 @@ export class Arc extends BaseGeometry implements IArc {
         nx = this.x + s * Math.cos(this.hdg)
         ny = this.y + s * Math.sin(this.hdg)
         nHdg = this.hdg
-      } else {
+      }
+      else {
         const a = (2 / curvature) * Math.sin((s * curvature) / 2)
         const hdg_ = this.hdg - Math.PI / 2
         const alpha = (Math.PI - s * curvature) / 2 - hdg_
-  
+
         const dx = -1 * a * Math.cos(alpha)
         const dy = a * Math.sin(alpha)
         nx = this.x + dx
@@ -120,15 +123,16 @@ export class Spiral extends BaseGeometry implements ISpiral {
     const referencePoints: ReferencePoint[] = []
 
     const cDot = (curvEnd - curvStart) / (length || 1)
-    
+
     // Construct sample points
     const sampleS = new Set<number>()
     const nums = Math.ceil(length / step)
     for (let i = 0; i <= nums; i++) {
       sampleS.add(Math.min(i * step, length))
     }
-    extraS.forEach(s => {
-        if (s >= 0 && s <= length) sampleS.add(s)
+    extraS.forEach((s) => {
+      if (s >= 0 && s <= length)
+        sampleS.add(s)
     })
     const sortedS = Array.from(sampleS).sort((a, b) => a - b)
 
@@ -146,9 +150,9 @@ export class Spiral extends BaseGeometry implements ISpiral {
         if (currentS + d > targetS) {
           d = targetS - currentS
         }
-        if (d < 1e-9) { 
-             currentS = targetS
-             break
+        if (d < 1e-9) {
+          currentS = targetS
+          break
         }
 
         const sMid = currentS + d / 2
@@ -216,9 +220,16 @@ export class ParamPoly3 extends BaseGeometry implements IParamPoly3 {
 
   sample(elevationsProfile: IElevationProfile, step: number, extraS: number[] = []) {
     const {
-      aU, bU, cU, dU,
-      aV, bV, cV, dV,
-      hdg, length,
+      aU,
+      bU,
+      cU,
+      dU,
+      aV,
+      bV,
+      cV,
+      dV,
+      hdg,
+      length,
     } = this
     const referencePoints: ReferencePoint[] = []
 
@@ -227,8 +238,9 @@ export class ParamPoly3 extends BaseGeometry implements IParamPoly3 {
     for (let i = 0; i <= nums; i++) {
       sampleS.add(Math.min(i * step, length))
     }
-    extraS.forEach(s => {
-        if (s >= 0 && s <= length) sampleS.add(s)
+    extraS.forEach((s) => {
+      if (s >= 0 && s <= length)
+        sampleS.add(s)
     })
     const sortedS = Array.from(sampleS).sort((a, b) => a - b)
 
@@ -239,7 +251,7 @@ export class ParamPoly3 extends BaseGeometry implements IParamPoly3 {
       if (this.pRange === 'normalized') {
         p = s / len
       }
-      else { 
+      else {
         p = s
       }
 

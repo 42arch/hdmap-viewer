@@ -86,7 +86,8 @@ class RoutingGraph {
 
         // 1. Explicit Successors (A specifies link to B)
         for (const laneA of lanesA) {
-          if (laneA.id === '0') continue
+          if (laneA.id === '0')
+            continue
           const successorId = laneA.link?.successor?.id
           if (successorId) {
             const laneB = lanesB.find(lb => lb.id === successorId)
@@ -95,7 +96,8 @@ class RoutingGraph {
               if (idNum < 0) {
                 // Right: A -> B
                 this.addEdge({ from: laneA.getUserId(), to: laneB.getUserId(), type: 'section' })
-              } else if (idNum > 0) {
+              }
+              else if (idNum > 0) {
                 // Left: B -> A
                 this.addEdge({ from: laneB.getUserId(), to: laneA.getUserId(), type: 'section' })
               }
@@ -105,7 +107,8 @@ class RoutingGraph {
 
         // 2. Explicit Predecessors (B specifies link to A)
         for (const laneB of lanesB) {
-          if (laneB.id === '0') continue
+          if (laneB.id === '0')
+            continue
           const predecessorId = laneB.link?.predecessor?.id
           if (predecessorId) {
             const laneA = lanesA.find(la => la.id === predecessorId)
@@ -114,7 +117,8 @@ class RoutingGraph {
               if (idNum < 0) {
                 // Right: A -> B
                 this.addEdge({ from: laneA.getUserId(), to: laneB.getUserId(), type: 'section' })
-              } else if (idNum > 0) {
+              }
+              else if (idNum > 0) {
                 // Left: B -> A
                 this.addEdge({ from: laneB.getUserId(), to: laneA.getUserId(), type: 'section' })
               }
@@ -124,8 +128,10 @@ class RoutingGraph {
 
         // 3. Implicit Links (Same ID)
         for (const laneA of lanesA) {
-          if (laneA.id === '0') continue
-          if (laneA.type === 'none') continue
+          if (laneA.id === '0')
+            continue
+          if (laneA.type === 'none')
+            continue
 
           const laneB = lanesB.find(lb => lb.id === laneA.id)
           if (laneB) {
@@ -133,15 +139,20 @@ class RoutingGraph {
             if (idNum < 0) {
               // Right: A -> B
               // Check if A already has successor or B already has predecessor
-              if (this.getSuccessors(laneA.getUserId()).length > 0) continue
-              if (this.getPredecessors(laneB.getUserId()).length > 0) continue
-              
+              if (this.getSuccessors(laneA.getUserId()).length > 0)
+                continue
+              if (this.getPredecessors(laneB.getUserId()).length > 0)
+                continue
+
               this.addEdge({ from: laneA.getUserId(), to: laneB.getUserId(), type: 'section' })
-            } else if (idNum > 0) {
+            }
+            else if (idNum > 0) {
               // Left: B -> A
               // Check if B already has successor or A already has predecessor
-              if (this.getSuccessors(laneB.getUserId()).length > 0) continue
-              if (this.getPredecessors(laneA.getUserId()).length > 0) continue
+              if (this.getSuccessors(laneB.getUserId()).length > 0)
+                continue
+              if (this.getPredecessors(laneA.getUserId()).length > 0)
+                continue
 
               this.addEdge({ from: laneB.getUserId(), to: laneA.getUserId(), type: 'section' })
             }

@@ -1,0 +1,17 @@
+# Netlify configuration file inside apps/viewer
+# Reference: https://docs.netlify.com/configure-builds/file-based-configuration/
+
+[build]
+  # Build command to run. Since Netlify handles workspace dependency resolution,
+  # we specify our specific app target build filter.
+  command = "pnpm --filter hdmap-viewer... build"
+
+  # Directory containing the static site assets to be published.
+  publish = "apps/viewer/dist"
+
+# Single Page Application (SPA) redirect rule
+# Redirects all requests to index.html for client-side routing
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

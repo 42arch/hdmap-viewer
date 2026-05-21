@@ -1,5 +1,5 @@
-import type { RawObject, RawObjects } from "../types/raw"
-import arrayize from "../utils/arrayize"
+import type { RawObject, RawObjects } from '../types/raw'
+import arrayize from '../utils/arrayize'
 
 export class Object {
   public id?: string
@@ -16,7 +16,6 @@ export class Object {
   public height?: number
   public width?: number
   public length?: number
-
 
   constructor(rawObject: RawObject) {
     this.id = rawObject.id
@@ -39,7 +38,7 @@ export default class Objects {
   public objects: Object[] = []
 
   constructor(rawObjects: RawObjects) {
-    for(const rawObejct of arrayize(rawObjects.object)) {
+    for (const rawObejct of arrayize(rawObjects.object)) {
       const object = new Object(rawObejct)
       this.objects.push(object)
     }

@@ -1,7 +1,5 @@
-import type { OpenDrive } from '..'
 import type { IConnection, IJunction, ILaneLink } from '../types'
 import type { RawConnection, RawJunction } from '../types/raw'
-import type { Lane } from './lanes'
 import arrayize from '../utils/arrayize'
 
 export class Connection implements IConnection {

@@ -1,0 +1,17 @@
+# Netlify configuration file at the monorepo root
+# Reference: https://docs.netlify.com/configure-builds/file-based-configuration/
+
+[build]
+  # Command to run from the root of the workspace.
+  # This uses Turborepo to build dependencies (opendrive-parser) and then the viewer.
+  command = "pnpm build"
+
+  # Directory containing the static site assets to be published.
+  publish = "apps/viewer/dist"
+
+# Single Page Application (SPA) redirect rule
+# Redirects all requests to index.html for client-side routing
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

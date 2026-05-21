@@ -1,5 +1,5 @@
 import type { Lane } from 'opendrive-parser'
-import type { Vector3 } from 'three'
+import type { BufferGeometry, Vector3 } from 'three'
 import type { Level, Source } from './types'
 import type { RoadMesh } from './viewer'
 import type Viewer from './viewer'
@@ -46,8 +46,9 @@ class HighlightManager {
 
   private getLaneFromId(laneId: string): Lane | undefined {
     const parts = laneId.split('_')
-    if (parts.length < 3) return undefined
-    
+    if (parts.length < 3)
+      return undefined
+
     // The format is roadId_sectionS_laneId.
     // However, roadId might contain underscores? Assuming standard format.
     // Better logic: last part is laneId, second last is sectionS, rest is roadId.
@@ -56,10 +57,12 @@ class HighlightManager {
     const rId = parts.join('_')
 
     const road = this.viewer.openDrive?.getRoadById(rId)
-    if (!road) return undefined
+    if (!road)
+      return undefined
 
     const section = road.getLaneSectionByS(Number(sS))
-    if (!section) return undefined
+    if (!section)
+      return undefined
 
     return section.getLaneById(lId)
   }
@@ -86,7 +89,8 @@ class HighlightManager {
     }
 
     const geometry = this.viewer.createLaneGeometry(lane)
-    if (!geometry) return
+    if (!geometry)
+      return
 
     const [roadKey, sectionKey] = laneId.split('_')
     this.setHighlightRoad(roadKey!)
@@ -124,19 +128,22 @@ class HighlightManager {
       return
     }
 
-    const laneGeometries = []
+    const laneGeometries: BufferGeometry[] = []
     const laneSections = road.getLaneSections()
-    
+
     for (const section of laneSections) {
-        for (const lane of section.getLanes()) {
-            const laneId = `${roadId}_${section.s}_${lane.id}`
-            if (!this.viewer.isLaneVisible(laneId)) continue
-            const geom = this.viewer.createLaneGeometry(lane)
-            if (geom) laneGeometries.push(geom)
-        }
+      for (const lane of section.getLanes()) {
+        const laneId = `${roadId}_${section.s}_${lane.id}`
+        if (!this.viewer.isLaneVisible(laneId))
+          continue
+        const geom = this.viewer.createLaneGeometry(lane)
+        if (geom)
+          laneGeometries.push(geom)
+      }
     }
 
-    if (laneGeometries.length === 0) return
+    if (laneGeometries.length === 0)
+      return
 
     const merged = BufferGeometryUtils.mergeGeometries(laneGeometries)
     const material = new MeshBasicMaterial({
@@ -179,17 +186,20 @@ class HighlightManager {
     if (!laneSection) {
       return
     }
-    const laneGeometries = []
+    const laneGeometries: BufferGeometry[] = []
     const lanes = laneSection.getLanes()
 
     for (const lane of lanes) {
       const laneId = `${roadId}_${sectionS}_${lane.id}`
-      if (!this.viewer.isLaneVisible(laneId)) continue
+      if (!this.viewer.isLaneVisible(laneId))
+        continue
       const geom = this.viewer.createLaneGeometry(lane)
-      if (geom) laneGeometries.push(geom)
+      if (geom)
+        laneGeometries.push(geom)
     }
 
-    if (laneGeometries.length === 0) return
+    if (laneGeometries.length === 0)
+      return
 
     const merged = BufferGeometryUtils.mergeGeometries(laneGeometries)
     const material = new MeshBasicMaterial({
@@ -208,16 +218,18 @@ class HighlightManager {
     const visibleLaneIds = laneIds.filter(id => this.viewer.isLaneVisible(id))
     if (visibleLaneIds.length === 0)
       return
-    const geometries = []
+    const geometries: BufferGeometry[] = []
     for (const laneId of visibleLaneIds) {
       const lane = this.getLaneFromId(laneId)
       if (lane) {
-          const geom = this.viewer.createLaneGeometry(lane)
-          if (geom) geometries.push(geom)
+        const geom = this.viewer.createLaneGeometry(lane)
+        if (geom)
+          geometries.push(geom)
       }
     }
 
-    if (geometries.length === 0) return
+    if (geometries.length === 0)
+      return
 
     const merged = BufferGeometryUtils.mergeGeometries(geometries)
     const material = new MeshBasicMaterial({
@@ -245,16 +257,18 @@ class HighlightManager {
     const visibleLaneIds = laneIds.filter(id => this.viewer.isLaneVisible(id))
     if (visibleLaneIds.length === 0)
       return
-    const geometries = []
+    const geometries: BufferGeometry[] = []
     for (const laneId of visibleLaneIds) {
       const lane = this.getLaneFromId(laneId)
       if (lane) {
-          const geom = this.viewer.createLaneGeometry(lane)
-          if (geom) geometries.push(geom)
+        const geom = this.viewer.createLaneGeometry(lane)
+        if (geom)
+          geometries.push(geom)
       }
     }
 
-    if (geometries.length === 0) return
+    if (geometries.length === 0)
+      return
 
     const merged = BufferGeometryUtils.mergeGeometries(geometries)
     const material = new MeshBasicMaterial({

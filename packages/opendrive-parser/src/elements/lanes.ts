@@ -259,13 +259,15 @@ export class LaneSection implements ILaneSection {
     // Use strict tolerances to handle double-sampling at section boundaries
     const sectionPoints = points.filter((p) => {
       const s = p.getSOfRoad()
-      
+
       // Exclude points from the previous section (e.g., s = startS - 1e-4)
-      if (s < startS - 1e-5) return false
+      if (s < startS - 1e-5)
+        return false
 
       if (isLastSection) {
         return s <= endS + 1e-5
-      } else {
+      }
+      else {
         // Exclude the exact start point of the next section (s = endS)
         // But keep the pre-step point (s = endS - 1e-4)
         return s < endS - 1e-5

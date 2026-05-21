@@ -32,19 +32,12 @@ interface InfoState {
 }
 
 const store = useAppStore()
-const { viewer, openDrive, fileInfo } = storeToRefs(store)
+const { viewer, fileInfo } = storeToRefs(store)
 const state = reactive<InfoState>({
   basic: null,
   coordinate: null,
   predecessors: [],
   successors: [],
-})
-
-watch(openDrive, () => {
-  if (!openDrive.value)
-    return
-
-  console.warn(9999, openDrive.value?.header)
 })
 
 watch(viewer, () => {
@@ -82,7 +75,7 @@ watch(viewer, () => {
 </script>
 
 <template>
-  <NCard :class="['info-panel', { 'has-content': !!state.basic }]" content-style="padding: 0">
+  <NCard class="info-panel" :class="[{ 'has-content': !!state.basic }]" content-style="padding: 0">
     <div class="title">
       <NIcon size="12">
         <InfoCircle />

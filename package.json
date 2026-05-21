@@ -3,12 +3,12 @@
   "private": true,
   "packageManager": "pnpm@10.7.1",
   "description": "The monorepo for hdmap parser and viewer",
+  "author": "Ren Dan",
+  "license": "ISC",
   "repository": {
     "type": "github",
     "url": "https://github.com/42arch/hdmap-viewer"
   },
-  "author": "Ren Dan",
-  "license": "ISC",
   "keywords": [],
   "engines": {
     "node": ">=18"
@@ -17,6 +17,7 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
+    "lint:fix": "turbo run lint:fix",
     "clean": "turbo run clean && rm -rf node_modules",
     "changeset": "changeset",
     "version-packages": "changeset version",

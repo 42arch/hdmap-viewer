@@ -297,13 +297,13 @@ class Viewer {
           `attribute float laneVisible;
            varying float vLaneVisible;
            void main() {
-             vLaneVisible = laneVisible;`
+             vLaneVisible = laneVisible;`,
         )
         shader.fragmentShader = shader.fragmentShader.replace(
           'void main() {',
           `varying float vLaneVisible;
            void main() {
-             if (vLaneVisible < 0.5) discard;`
+             if (vLaneVisible < 0.5) discard;`,
         )
       }
     }

@@ -33,7 +33,7 @@ export default class PlanView implements IPlanView {
 
   sample(elevationProfile: IElevationProfile, step: number, extraS: number[] = []): ReferencePoint[] {
     const referencePoints: ReferencePoint[] = []
-    
+
     for (let i = 0; i < this.geometries.length; i++) {
       const geometry = this.geometries[i]
       const sStartRoad = geometry.s
@@ -45,7 +45,7 @@ export default class PlanView implements IPlanView {
         .map(s => s - sStartRoad)
 
       const points = geometry.sample(elevationProfile, step, localExtraS)
-      
+
       points.forEach((p) => {
         const roadS = p.s + sStartRoad
         p.setSOfRoad(roadS)

@@ -151,14 +151,15 @@ class Road implements IRoad {
     const epsilon = 1e-4
 
     const addS = (s: number) => {
-        if (s < 0 || s > this.length) return
-        extraS.add(s)
-        // Add a pre-step point for internal transitions to handle discontinuities
-        if (s > epsilon && s < this.length) {
-            extraS.add(s - epsilon)
-        }
+      if (s < 0 || s > this.length)
+        return
+      extraS.add(s)
+      // Add a pre-step point for internal transitions to handle discontinuities
+      if (s > epsilon && s < this.length) {
+        extraS.add(s - epsilon)
+      }
     }
-    
+
     // Collect critical S from Lane Sections
     if (this.lanes && this.lanes.laneSections) {
       this.lanes.laneSections.forEach(section => addS(section.s))

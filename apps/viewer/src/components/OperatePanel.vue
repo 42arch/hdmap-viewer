@@ -25,8 +25,6 @@ const precisionOptions = [{
   value: 1,
 }]
 
-
-
 watch(precision, () => {
   if (!viewer.value)
     return
@@ -114,7 +112,8 @@ function nodeProps({ option }: { option: TreeOption }) {
       // viewer.value?.setSelectedLane(option.key as string)
     },
     onMouseover() {
-      if (!isVisible) return
+      if (!isVisible)
+        return
       if (highlightTimer)
         clearTimeout(highlightTimer)
       highlightTimer = setTimeout(() => {
@@ -152,7 +151,7 @@ function renderSuffix({ option }: { option: TreeOption }) {
         },
         {
           default: () => h(NIcon, { size: 12 }, { default: () => h(Crosshairs) }),
-        }
+        },
       ),
       h(
         NButton,
@@ -168,9 +167,9 @@ function renderSuffix({ option }: { option: TreeOption }) {
         },
         {
           default: () => h(NIcon, { size: 12 }, { default: () => h(isVisible ? Eye : EyeSlash) }),
-        }
+        },
       ),
-    ]
+    ],
   )
 }
 

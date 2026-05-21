@@ -17,6 +17,11 @@
         "^lint"
       ]
     },
+    "lint:fix": {
+      "dependsOn": [
+        "^lint:fix"
+      ]
+    },
     "dev": {
       "cache": false,
       "persistent": true
